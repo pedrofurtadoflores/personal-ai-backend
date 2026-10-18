@@ -17,18 +17,19 @@ npm run dev              # http://localhost:3333 · documentação em /docs
 
 ## Scripts
 
-| Script              | O que faz                                     |
-| ------------------- | --------------------------------------------- |
-| `dev`               | Servidor com reload                           |
-| `build` / `start`   | Compila para `dist/` e roda                   |
-| `typecheck`         | Checa tipos de `src`, `scripts` e `test`      |
-| `lint` / `format`   | ESLint / Prettier                             |
-| `test`              | Testes de integração (precisa do `db:up`)     |
-| `db:up` / `db:down` | Sobe/derruba o Postgres local                 |
-| `db:generate`       | Gera migration a partir de `src/db/schema.ts` |
-| `db:migrate`        | Aplica as migrations                          |
-| `db:studio`         | Abre o Drizzle Studio                         |
-| `hash-password`     | Gera o hash bcrypt da senha de login          |
+| Script              | O que faz                                                  |
+| ------------------- | ---------------------------------------------------------- |
+| `dev`               | Servidor com reload                                        |
+| `build` / `start`   | Compila para `dist/` e roda                                |
+| `typecheck`         | Checa tipos de `src`, `scripts` e `test`                   |
+| `lint` / `format`   | ESLint (com regras de promises) / Prettier                 |
+| `test`              | Testes de integração (precisa do `db:up`; não lê o `.env`) |
+| `openapi:export`    | Regera `openapi.json`, o contrato usado pelo front         |
+| `db:up` / `db:down` | Sobe/derruba o Postgres local                              |
+| `db:generate`       | Gera migration a partir de `src/db/schema.ts`              |
+| `db:migrate`        | Aplica as migrations                                       |
+| `db:studio`         | Abre o Drizzle Studio                                      |
+| `hash-password`     | Gera o hash bcrypt da senha de login                       |
 
 ## Estrutura
 
@@ -36,23 +37,29 @@ npm run dev              # http://localhost:3333 · documentação em /docs
 src/
   config/env.ts        variáveis de ambiente validadas com Zod
   db/                  schema, client e migrator
-  lib/http.ts          formato padrão de erro da API
+  lib/http.ts          formato padrão de erro e respostas de erro do OpenAPI
+  lib/client-ip.ts     chave do cliente para rate limit (IPv6 agrupado por /64)
   plugins/auth.ts      JWT; toda rota exige token, exceto as marcadas com config.public
-  modules/<módulo>/    rotas por domínio (auth, health, ...)
+  modules/<módulo>/    rotas e regras por domínio (auth, health, sinapses, ...)
 drizzle/               migrations SQL geradas
+openapi.json           contrato da API (gerado; um teste confere que está em dia)
 test/                  testes de integração (vitest + app.inject)
 ```
 
 ## Autenticação
 
-- `POST /auth/login` devolve um JWT. Depois de 5 senhas erradas, o IP fica bloqueado por um tempo que dobra a cada nova falha (até 24 h).
+- `POST /auth/login` devolve um JWT. Depois de 5 senhas erradas, o IP (ou o prefixo IPv6 /64) fica bloqueado por um tempo que dobra a cada nova falha, até 24 h. O bloqueio fica no banco e sobrevive a deploys.
+- Há também um teto global de tentativas por minuto (`LOGIN_GLOBAL_MAX_PER_MINUTE`), para um ataque distribuído não saturar a CPU.
 - O token só vale enquanto a senha for a mesma: trocar `APP_PASSWORD_HASH` derruba todas as sessões.
 - `POST /auth/logout-all` encerra todas as sessões sem trocar a senha.
 
 ## Deploy (Railway)
 
-- O serviço usa o `Dockerfile`: roda como usuário sem privilégios, aplica as migrations e sobe o servidor.
+- `railway.toml` define o build pelo `Dockerfile`, o healthcheck em `/health` e o restart automático.
+- A imagem roda como usuário sem privilégios, aplica as migrations e sobe o servidor.
 - O Postgres precisa ter **pgvector** e ser **Postgres 17**, a mesma versão do `docker-compose.yml` (D35): use o template de Postgres com pgvector da Railway.
 - Ative os **backups** do Postgres na Railway (D39).
-- Configure as variáveis do `.env.example`, com `FRONTEND_URL` apontando para a URL da Vercel. `TRUST_PROXY` já é `true` em produção.
+- Configure as variáveis do `.env.example`, com `FRONTEND_URL` apontando para a URL da Vercel.
+- `TRUST_PROXY`: em produção o padrão confia só nas faixas privadas de onde o proxy da Railway conecta. No primeiro deploy, confira nos logs de login (`ip`) se aparece o seu IP real.
+- Previews da Vercel: defina `FRONTEND_URL_PATTERN` com uma regex restrita ao seu projeto.
 - `/openapi.json` exige token em produção e `/docs` só existe fora de produção.

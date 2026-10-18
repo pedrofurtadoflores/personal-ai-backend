@@ -263,19 +263,13 @@ export const sinapseLinks = pgTable(
     createdBy: author().notNull(),
     createdAt: createdAt(),
   },
-  // Conexão não direcionada: guardada sempre com sinapse_a < sinapse_b (ver orderedPair),
-  // o que impede duplicata invertida e auto-conexão.
+  // Conexão não direcionada: guardada sempre com sinapse_a < sinapse_b
+  // (ver orderedPair em modules/sinapses/links.ts), o que impede duplicata invertida e auto-conexão.
   (t) => [
     uniqueIndex().on(t.sinapseA, t.sinapseB),
     check("sinapse_links_ordered_pair", sql`${t.sinapseA} < ${t.sinapseB}`),
   ],
 )
-
-/** Normaliza o par para o formato exigido por sinapse_links. */
-export function orderedPair(a: string, b: string): { sinapseA: string; sinapseB: string } {
-  if (a === b) throw new Error("Uma sinapse não pode se conectar a ela mesma")
-  return a < b ? { sinapseA: a, sinapseB: b } : { sinapseA: b, sinapseB: a }
-}
 
 export const sinapseSources = pgTable(
   "sinapse_sources",
@@ -408,3 +402,16 @@ export const settings = pgTable("settings", {
   value: jsonb().notNull(),
   updatedAt: updatedAt(),
 })
+
+/** Bloqueio progressivo de login por IP (D44). No banco para sobreviver a deploys e restarts. */
+export const loginThrottle = pgTable(
+  "login_throttle",
+  {
+    /** IPv4 ou prefixo IPv6 /64 (ver lib/client-ip.ts). */
+    key: text().primaryKey(),
+    failures: integer().notNull().default(0),
+    lockedUntil: timestamp({ withTimezone: true }),
+    lastFailureAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.lastFailureAt)],
+)

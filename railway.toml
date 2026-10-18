@@ -1,0 +1,12 @@
+# Configuração do serviço na Railway (config as code).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# A Railway só troca para o deploy novo depois que /health responder 200
+# (as migrations rodam antes do servidor subir, no CMD do Dockerfile).
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

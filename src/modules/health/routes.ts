@@ -15,7 +15,7 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
       config: { public: true },
       schema: {
         tags: ["health"],
-        summary: "Status do servidor e do banco",
+        summary: "Status do servidor e do banco (usado pelo healthcheck da Railway)",
         security: [],
         response: { 200: healthResponse, 503: healthResponse },
       },
