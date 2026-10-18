@@ -9,6 +9,20 @@ export const errorResponse = z.object({
 
 export type ErrorResponse = z.infer<typeof errorResponse>
 
+/** Erro esperado, com código e mensagem próprios para o cliente (ex.: 404 de um recurso). */
+export class HttpError extends Error {
+  constructor(
+    public statusCode: number,
+    public code: string,
+    message?: string,
+  ) {
+    super(message ?? code)
+  }
+}
+
+export const notFound = (what = "Recurso") =>
+  new HttpError(404, "not_found", `${what} não encontrado.`)
+
 /**
  * Respostas de erro que toda rota pode devolver, para o contrato OpenAPI (e os tipos do front)
  * conhecerem o formato. Rotas públicas não declaram 401.

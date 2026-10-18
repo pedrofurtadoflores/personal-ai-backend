@@ -97,6 +97,8 @@ export const conversations = pgTable(
     currentLeafMessageId: uuid().references((): AnyPgColumn => messages.id, {
       onDelete: "set null",
     }),
+    /** Última mensagem já lida pelo job de consolidação de sinapses. */
+    lastConsolidatedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: deletedAt(),
@@ -304,17 +306,37 @@ export const sinapseSuggestions = pgTable(
 
 // ─── Arquivos ───────────────────────────────────────────────────────────────
 
-export const files = pgTable("files", {
+export const fileOrigin = pgEnum("file_origin", ["upload", "generated"])
+
+export const files = pgTable(
+  "files",
+  {
+    id: id(),
+    r2Key: text().notNull().unique(),
+    name: text().notNull(),
+    mime: text().notNull(),
+    size: bigint({ mode: "number" }).notNull(),
+    origin: fileOrigin().notNull().default("upload"),
+    /** Conversa onde o arquivo entrou (para o RAG daquela conversa). */
+    conversationId: uuid().references(() => conversations.id, { onDelete: "set null" }),
+    extractedText: text(),
+    status: fileStatus().notNull().default("pending"),
+    error: text(),
+    createdAt: createdAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [index().on(t.createdAt), index().on(t.conversationId)],
+)
+
+/** Backups do banco enviados ao R2 (D39). */
+export const backups = pgTable("backups", {
   id: id(),
   r2Key: text().notNull().unique(),
-  name: text().notNull(),
-  mime: text().notNull(),
-  size: bigint({ mode: "number" }).notNull(),
-  extractedText: text(),
-  status: fileStatus().notNull().default("pending"),
+  size: bigint({ mode: "number" }),
+  status: text().$type<"running" | "completed" | "failed">().notNull().default("running"),
   error: text(),
   createdAt: createdAt(),
-  deletedAt: deletedAt(),
+  completedAt: timestamp({ withTimezone: true }),
 })
 
 export const fileChunks = pgTable(
@@ -358,12 +380,27 @@ export const generatedImages = pgTable("generated_images", {
 // ─── Modelos, uso e configurações ───────────────────────────────────────────
 
 /** Catálogo próprio: /v1/models não informa preço nem descrição (D11). Preços em USD por 1M tokens. */
+export const modelKind = pgEnum("model_kind", [
+  "chat",
+  "image",
+  "embedding",
+  "transcription",
+  "speech",
+  "realtime",
+  "other",
+])
+
 export const modelCatalog = pgTable("model_catalog", {
   id: text().primaryKey(),
+  kind: modelKind().notNull().default("other"),
+  /** Snapshot datado (ex.: gpt-5-2025-08-07): fica fora do seletor por padrão. */
+  isSnapshot: boolean().notNull().default(false),
   displayName: text(),
   inputPrice: usd(),
   cachedInputPrice: usd(),
   outputPrice: usd(),
+  /** Preços que não são texto por 1M tokens (áudio, imagem, por minuto, por chamada). */
+  extraPrices: jsonb().$type<Record<string, number>>().notNull().default({}),
   contextWindow: integer(),
   maxOutputTokens: integer(),
   capabilities: jsonb().$type<Record<string, boolean>>().notNull().default({}),

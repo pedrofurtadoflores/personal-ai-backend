@@ -10,6 +10,8 @@ FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed
 WORKDIR /app
 # "::" escuta IPv4 e IPv6 (rede privada da Railway é IPv6).
 ENV NODE_ENV=production HOST=::
+# pg_dump para os backups (D39), na mesma versão major do banco.
+RUN apk add --no-cache postgresql17-client
 COPY --chown=node:node package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build --chown=node:node /app/dist ./dist

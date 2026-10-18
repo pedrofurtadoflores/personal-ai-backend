@@ -1,4 +1,5 @@
 import cors from "@fastify/cors"
+import multipart from "@fastify/multipart"
 import rateLimit from "@fastify/rate-limit"
 import swagger from "@fastify/swagger"
 import Fastify, { type FastifyError, type FastifyRequest } from "fastify"
@@ -9,11 +10,27 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod"
 import { env } from "./config/env.js"
-import { pool } from "./db/client.js"
+import { db, pool } from "./db/client.js"
+import { modelCatalog } from "./db/schema.js"
 import { clientKey } from "./lib/client-ip.js"
-import { errorCode, errorMessages } from "./lib/http.js"
+import { errorCode, errorMessages, HttpError } from "./lib/http.js"
+import { enqueue, startJobs, stopJobs } from "./lib/jobs.js"
+import { audioRoutes } from "./modules/audio/routes.js"
 import { authRoutes } from "./modules/auth/routes.js"
+import { backupRoutes } from "./modules/backups/routes.js"
+import "./modules/backups/service.js"
+import "./modules/chat/jobs.js"
+import { chatRoutes } from "./modules/chat/routes.js"
+import { conversationRoutes } from "./modules/conversations/routes.js"
+import { fileRoutes } from "./modules/files/routes.js"
 import { healthRoutes } from "./modules/health/routes.js"
+import { modelRoutes } from "./modules/models/routes.js"
+import "./modules/models/service.js"
+import { searchRoutes } from "./modules/search/routes.js"
+import { settingsRoutes } from "./modules/settings/routes.js"
+import "./modules/sinapses/consolidation.js"
+import { sinapseRoutes } from "./modules/sinapses/routes.js"
+import { usageRoutes } from "./modules/usage/routes.js"
 import { authPlugin } from "./plugins/auth.js"
 
 const isProduction = env.NODE_ENV === "production"
@@ -51,6 +68,10 @@ export async function buildApp() {
       })
     }
 
+    if (error instanceof HttpError) {
+      return reply.code(error.statusCode).send({ error: error.code, message: error.message })
+    }
+
     const status = error.statusCode ?? 500
     if (status >= 500) {
       request.log.error(error)
@@ -76,7 +97,16 @@ export async function buildApp() {
     if (!reply.request.url.startsWith(DOCS_PREFIX)) reply.header("x-frame-options", "DENY")
   })
 
+  // Jobs em background (pg-boss) sobem junto com o servidor e param antes do pool.
+  app.addHook("onReady", async () => {
+    await startJobs(app.log)
+    if (env.NODE_ENV === "test" || !env.OPENAI_API_KEY) return
+    const [anyModel] = await db.select({ id: modelCatalog.id }).from(modelCatalog).limit(1)
+    if (!anyModel) await enqueue("models.sync")
+  })
+
   app.addHook("onClose", async () => {
+    await stopJobs()
     await pool.end()
   })
 
@@ -88,7 +118,10 @@ export async function buildApp() {
     maxAge: 600,
   })
 
-  // Sem limite global: cada rota define o seu (login agora; chat e OpenAI nas próximas fases).
+  // Áudio do ditado (multipart). Uploads de arquivo vão direto ao R2, não passam aqui.
+  await app.register(multipart, { limits: { fileSize: 25 * 1024 * 1024, files: 1 } })
+
+  // Sem limite global: cada rota que custa caro (login, OpenAI) define o seu.
   await app.register(rateLimit, {
     global: false,
     keyGenerator: (request) => clientKey(request.ip),
@@ -129,6 +162,16 @@ export async function buildApp() {
 
   await app.register(healthRoutes)
   await app.register(authRoutes)
+  await app.register(settingsRoutes)
+  await app.register(modelRoutes)
+  await app.register(usageRoutes)
+  await app.register(conversationRoutes)
+  await app.register(chatRoutes)
+  await app.register(fileRoutes)
+  await app.register(sinapseRoutes)
+  await app.register(searchRoutes)
+  await app.register(audioRoutes)
+  await app.register(backupRoutes)
 
   return app
 }

@@ -15,6 +15,13 @@
       "when": 1792359264146,
       "tag": "0001_login_throttle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792361376576,
+      "tag": "0002_chat_files_models",
+      "breakpoints": true
     }
   ]
 }

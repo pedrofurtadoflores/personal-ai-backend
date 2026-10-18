@@ -46,6 +46,15 @@ openapi.json           contrato da API (gerado; um teste confere que está em di
 test/                  testes de integração (vitest + app.inject)
 ```
 
+## O que a API faz
+
+- **Chat** com streaming (SSE), conversas em árvore (editar/regenerar sem perder versões), pastas, lixeira, modo anônimo.
+- **Sinapses** (memória): o modelo lê e escreve por tools durante a conversa; um job consolida a conversa depois de 3 min parada. Toda escrita gera versão; sinapses travadas e conteúdo externo viram sugestões.
+- **Modelos**: catálogo sincronizado com o `/v1/models` da conta, com preço, recomendação e exemplo; custo de cada mensagem e tela de uso.
+- **Arquivos** no R2 (upload direto com URL assinada), texto extraído de PDF/DOCX/texto e indexado para o RAG; imagens vão para a visão.
+- **Busca web** com fontes, **geração de imagem** (galeria), **ditado**, **leitura em voz alta** e **modo voz** em tempo real.
+- **Busca** no histórico (texto + semântica) e **backups** semanais do banco no R2.
+
 ## Autenticação
 
 - `POST /auth/login` devolve um JWT. Depois de 5 senhas erradas, o IP (ou o prefixo IPv6 /64) fica bloqueado por um tempo que dobra a cada nova falha, até 24 h. O bloqueio fica no banco e sobrevive a deploys.
@@ -63,3 +72,18 @@ test/                  testes de integração (vitest + app.inject)
 - `TRUST_PROXY`: em produção o padrão confia só nas faixas privadas de onde o proxy da Railway conecta. No primeiro deploy, confira nos logs de login (`ip`) se aparece o seu IP real.
 - Previews da Vercel: defina `FRONTEND_URL_PATTERN` com uma regex restrita ao seu projeto.
 - `/openapi.json` exige token em produção e `/docs` só existe fora de produção.
+
+## CORS do bucket R2
+
+O navegador envia arquivos direto para o R2, então o bucket precisa liberar as origens do front. Se o token do R2 tiver permissão de admin, `POST /settings/storage-cors` (ou o botão em Configurações) faz isso. Senão, no painel da Cloudflare: **R2 → bucket → Settings → CORS Policy**:
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://SEU-APP.vercel.app"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["content-type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```

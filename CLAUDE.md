@@ -20,3 +20,17 @@ Leia `../plan.md` (decisões e fases) e `../CLAUDE.md` (convenções comuns).
 - `sinapse_links` exige `sinapse_a < sinapse_b`: use `orderedPair()` (`src/modules/sinapses/links.ts`), que também normaliza para minúsculas.
 - Embeddings sempre gravam `embedding_model` junto.
 - Testes de integração usam `app.inject()` contra o banco `personal_ai_test` (criado pelo `test/global-setup.ts`). Testes nunca leem o `.env`: só o que está em `vitest.config.ts`.
+
+## Módulos (src/modules)
+
+- `chat/`: `orchestrator.ts` (streaming, loop de tools, custo; parar salva o parcial), `context.ts` (instruções estáveis → histórico → RAG antes da última mensagem, D41), `tools.ts` (tools de sinapse, D37/D57), `parts.ts` (formato de `messages.content`), `jobs.ts` (título, embeddings).
+- `sinapses/`: `service.ts` (toda escrita gera versão; reindexa chunks), `consolidation.ts` (job pós-ociosidade, D58), `links.ts`.
+- `conversations/`, `files/` (R2 + extração + chunks), `models/` (catálogo + sync), `usage/`, `settings/`, `search/`, `audio/` (ditado, TTS, sessão realtime, voice-turns), `backups/`.
+
+## OpenAI, R2 e jobs
+
+- Sempre `openai()` e `r2()` de `src/lib` (nunca instanciar o SDK direto). Responses API com `store: false` (D55).
+- Todo consumo passa por `recordUsage()` (`src/lib/pricing.ts`); custo estimado marca `units.estimated`.
+- Jobs: `registerJob()` + `enqueue()` em `src/lib/jobs.ts`. Em testes a fila fica desligada: os jobs vão para `enqueuedJobs` e o teste chama `runJobNow()`.
+- Testes **nunca** chamam a OpenAI nem o R2: use `FakeOpenAI`/`FakeStorage` de `test/fakes.ts` (`setOpenAIClient`, `setStorage`).
+- Mudar o streaming: o contrato SSE é a D56 (`start`, `delta`, `part`, `image`, `status`, `error`, `done`); o front lê em `src/lib/chat/live.ts`.
