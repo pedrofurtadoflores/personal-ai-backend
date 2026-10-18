@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: personal_ai
+          POSTGRES_PASSWORD: personal_ai
+          POSTGRES_DB: personal_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U personal_ai -d personal_ai"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://personal_ai:personal_ai@localhost:5432/personal_ai_test
+      - run: npm run build
+      # As migrations precisam estar em dia com o schema.
+      - name: Schema e migrations sincronizados
+        run: |
+          npx drizzle-kit generate --name ci-check
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "Schema mudou sem migration: rode npm run db:generate e faça commit."
+            exit 1
+          fi
+        env:
+          DATABASE_URL: postgres://personal_ai:personal_ai@localhost:5432/personal_ai
+      - run: docker build -t personal-ai-backend .
