@@ -97,10 +97,13 @@ export async function consolidateConversation(conversationId: string, { force = 
   )
   if (!fresh.length) return { applied: 0 }
 
-  // D37: conteúdo externo (anexos, busca web) → tudo vira sugestão.
+  // D37: conteúdo externo (anexos, busca web, página lida) → tudo vira sugestão.
   const external = fresh.some((message) =>
     (message.content as MessagePart[]).some(
-      (part) => part.type === "file" || part.type === "sources",
+      (part) =>
+        part.type === "file" ||
+        part.type === "sources" ||
+        (part.type === "tool" && (part.name === "web_search" || part.name === "fetch_url")),
     ),
   )
 

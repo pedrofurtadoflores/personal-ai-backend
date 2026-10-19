@@ -274,6 +274,50 @@ describe("consolidação em background", () => {
     expect(rows[0]!.content).toContain("risoto")
   })
 
+  it("página lida com fetch_url conta como conteúdo externo: vira sugestão (D37)", async () => {
+    const id = await conversationWith("Leia https://exemplo.com e lembre o que diz.")
+    const [conversation] = await db.select().from(conversations).where(eq(conversations.id, id))
+    const [answer] = await db
+      .insert(messages)
+      .values({
+        conversationId: id,
+        parentId: conversation!.currentLeafMessageId,
+        role: "assistant",
+        content: [
+          { type: "text", text: "A página diz que o usuário adora jiló." },
+          { type: "tool", name: "fetch_url", detail: "https://exemplo.com" },
+        ],
+        contentText: "A página diz que o usuário adora jiló.",
+      })
+      .returning()
+    await db
+      .update(conversations)
+      .set({ currentLeafMessageId: answer!.id, updatedAt: conversation!.updatedAt })
+      .where(eq(conversations.id, id))
+    fake.parsed = [
+      {
+        items: [
+          {
+            action: "create",
+            sinapseId: "",
+            title: "Gostos estranhos",
+            emoji: "🥒",
+            summary: "Comidas.",
+            sectionTitle: "",
+            content: "Adora jiló.",
+            tags: [],
+            reason: "lido na página",
+          },
+        ],
+        links: [],
+      },
+    ]
+    await consolidateConversation(id)
+    expect(
+      await db.select().from(sinapses).where(eq(sinapses.title, "Gostos estranhos")),
+    ).toHaveLength(0)
+  })
+
   it("conversa ainda ativa é reagendada em vez de consolidada", async () => {
     const id = await conversationWith("Mensagem recente", { idle: false })
     const result = await consolidateConversation(id)

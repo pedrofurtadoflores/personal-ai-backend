@@ -242,10 +242,11 @@ describe("chat em streaming", () => {
     await send(id, { text: "Segredo" })
     const request = fake.requests.find((req) => req.stream) as {
       instructions: string
-      tools?: unknown[]
+      tools?: { name?: string }[]
     }
     expect(request.instructions).toContain("anônima")
-    expect(request.tools).toBeUndefined()
+    // Só a leitura de páginas (não é memória); nenhuma tool de sinapse.
+    expect(request.tools?.map((tool) => tool.name)).toEqual(["fetch_url"])
     expect(enqueuedJobs.some((job) => job.name === "sinapses.consolidate")).toBe(false)
   })
 

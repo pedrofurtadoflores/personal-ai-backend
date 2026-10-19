@@ -12,6 +12,7 @@ import {
   updateSinapse,
 } from "../sinapses/service.js"
 import { embedOne } from "../../lib/embeddings.js"
+import { fetchUrl, FetchUrlError } from "./fetch-url.js"
 import type { MessagePart } from "./parts.js"
 
 /** Similaridade de resumo acima da qual "criar" vira "atualizar a existente" (evita duplicatas). */
@@ -72,6 +73,13 @@ export const sinapseTools: FunctionTool[] = [
   }),
 ]
 
+/** Ler uma página que o usuário mandou (D75). Vale também em conversas anônimas. */
+export const fetchUrlTool = fn(
+  "fetch_url",
+  "Lê o texto de uma página da web ou PDF a partir da URL. Use quando o usuário mandar um link ou pedir para ler um endereço específico.",
+  { url: str("URL completa, com http:// ou https://") },
+)
+
 const createArgs = z.object({
   title: z.string().min(1),
   emoji: z.string(),
@@ -91,14 +99,16 @@ const updateArgs = z.object({
 export type ToolContext = {
   conversationId: string
   messageId: string
-  /** Conteúdo externo no contexto (busca web, arquivo): escritas viram sugestões (D37). */
+  /** Conteúdo externo no contexto (busca web, arquivo, página): escritas viram sugestões (D37). */
   external: () => boolean
+  markExternal: () => void
   onPart: (part: MessagePart) => void
+  signal?: AbortSignal
 }
 
 type ToolResult = { output: string }
 
-export async function runSinapseTool(
+export async function runTool(
   name: string,
   rawArgs: string,
   ctx: ToolContext,
@@ -114,6 +124,14 @@ export async function runSinapseTool(
 
   try {
     switch (name) {
+      case "fetch_url": {
+        const url = String(args.url ?? "")
+        ctx.onPart({ type: "tool", name: "fetch_url", detail: url })
+        // A página entra no contexto mesmo se der erro no meio: trata como externa já.
+        ctx.markExternal()
+        const page = await fetchUrl(url, ctx.signal)
+        return { output: JSON.stringify(page) }
+      }
       case "search_sinapses": {
         const results = await searchSinapses(String(args.query ?? ""))
         return { output: JSON.stringify(results.length ? results : "Nada encontrado.") }
@@ -137,7 +155,7 @@ export async function runSinapseTool(
         const { vector } = await embedOne(`# ${input.title}\n\n${input.summary}`)
         const [twin] = await similarSinapses(vector, { limit: 1 })
         if (twin && twin.score >= DUPLICATE_THRESHOLD) {
-          return runSinapseTool(
+          return runTool(
             "update_sinapse",
             JSON.stringify({
               id: twin.id,
@@ -252,7 +270,7 @@ export async function runSinapseTool(
     }
   } catch (error) {
     const message =
-      error instanceof HttpError || error instanceof z.ZodError
+      error instanceof HttpError || error instanceof z.ZodError || error instanceof FetchUrlError
         ? error.message
         : "Erro ao executar a ferramenta."
     return { output: JSON.stringify({ error: message }) }

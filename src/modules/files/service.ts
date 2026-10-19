@@ -39,6 +39,7 @@ export async function createUpload(input: {
   mime: string
   size: number
   conversationId?: string | null
+  folderId?: string | null
 }) {
   if (input.size > MAX_UPLOAD_BYTES) {
     throw new HttpError(413, "payload_too_large", "O limite é de 50 MB por arquivo.")
@@ -56,6 +57,7 @@ export async function createUpload(input: {
       mime: input.mime,
       size: input.size,
       conversationId: input.conversationId ?? null,
+      folderId: input.folderId ?? null,
     })
     .returning()
   return { file: row!, uploadUrl }
@@ -140,6 +142,30 @@ export async function saveGeneratedImage(params: {
   await db
     .insert(generatedImages)
     .values({ fileId: file!.id, messageId: params.messageId, prompt: params.prompt ?? "" })
+  return file!
+}
+
+/** Arquivo criado pelo interpretador de código (D74): vai para o R2 como "gerado". */
+export async function saveGeneratedFile(params: {
+  buffer: Buffer
+  name: string
+  mime: string
+  conversationId: string
+}) {
+  const r2Key = keyFor("generated", params.name)
+  await r2().put(r2Key, params.buffer, params.mime)
+  const [file] = await db
+    .insert(files)
+    .values({
+      r2Key,
+      name: params.name.slice(0, 200),
+      mime: params.mime,
+      size: params.buffer.length,
+      origin: "generated",
+      conversationId: params.conversationId,
+      status: "ready",
+    })
+    .returning()
   return file!
 }
 

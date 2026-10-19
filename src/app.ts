@@ -21,6 +21,7 @@ import { backupRoutes } from "./modules/backups/routes.js"
 import "./modules/backups/service.js"
 import "./modules/chat/jobs.js"
 import { chatRoutes } from "./modules/chat/routes.js"
+import { stopAllRuns } from "./modules/chat/runs.js"
 import { conversationRoutes } from "./modules/conversations/routes.js"
 import { fileRoutes } from "./modules/files/routes.js"
 import { healthRoutes } from "./modules/health/routes.js"
@@ -106,6 +107,8 @@ export async function buildApp() {
   })
 
   app.addHook("onClose", async () => {
+    // Para as respostas em andamento (salvam o parcial) antes de fechar o banco.
+    await stopAllRuns()
     await stopJobs()
     await pool.end()
   })

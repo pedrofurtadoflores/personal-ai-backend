@@ -6,7 +6,7 @@ import { z } from "zod"
  */
 export const messagePart = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string() }),
-  /** Anexo enviado pelo usuário. */
+  /** Anexo enviado pelo usuário, ou arquivo criado pelo interpretador de código. */
   z.object({
     type: z.literal("file"),
     fileId: z.string(),
@@ -39,11 +39,28 @@ export const messagePart = z.discriminatedUnion("type", [
     sinapses: z.array(z.object({ id: z.string(), title: z.string() })),
     files: z.array(z.object({ id: z.string(), name: z.string() })),
   }),
-  /** Uso de tool que não gera conteúdo próprio (ex.: buscas feitas). */
+  /** Uso de tool que não gera conteúdo próprio (ex.: buscas feitas, página lida). */
   z.object({
     type: z.literal("tool"),
     name: z.string(),
     detail: z.string().nullable(),
+  }),
+  /** Sinapse que o usuário mencionou com @ (entra inteira no contexto, D76). */
+  z.object({
+    type: z.literal("mention"),
+    sinapseId: z.string(),
+    title: z.string(),
+  }),
+  /** O começo da conversa entrou como resumo nesta resposta (D67). */
+  z.object({
+    type: z.literal("compacted"),
+    messages: z.number().int(),
+  }),
+  /** Código rodado pelo interpretador de código, com a saída (D74). */
+  z.object({
+    type: z.literal("code"),
+    code: z.string(),
+    logs: z.string().nullable(),
   }),
 ])
 

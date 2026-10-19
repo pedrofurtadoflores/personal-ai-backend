@@ -1,12 +1,13 @@
-import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm"
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod"
 import { z } from "zod"
 import { db } from "../../db/client.js"
-import { conversations, folders, messages } from "../../db/schema.js"
+import { conversations, folders, messages, sinapses } from "../../db/schema.js"
+import { enqueue } from "../../lib/jobs.js"
 import { HttpError, notFound, withErrors } from "../../lib/http.js"
 import { isoDate, jsonDates } from "../../lib/serialize.js"
 import { messagePart } from "../chat/parts.js"
-import { getConversation, latestLeafBelow, listMessages } from "./service.js"
+import { branchTo, getConversation, latestLeafBelow, listMessages } from "./service.js"
 
 const id = z.uuid()
 
@@ -34,24 +35,55 @@ export const messageSchema = z.object({
   content: z.array(messagePart),
   contentText: z.string().nullable(),
   model: z.string().nullable(),
-  status: z.enum(["streaming", "completed", "stopped", "error"]),
+  status: z.enum(["streaming", "completed", "stopped", "error", "incomplete"]),
   error: z.string().nullable(),
   tokensIn: z.number().nullable(),
   tokensCached: z.number().nullable(),
   tokensOut: z.number().nullable(),
   tokensReasoning: z.number().nullable(),
   costUsd: z.number().nullable(),
+  rating: z.enum(["up", "down"]).nullable(),
+  feedbackNote: z.string().nullable(),
+  /** Tokens reais de entrada da primeira rodada (medidor de contexto, D67). */
+  contextTokens: z.number().nullable(),
   createdAt: isoDate,
   completedAt: isoDate.nullable(),
 })
 
-const folderSchema = z.object({ id: z.string(), name: z.string(), position: z.number() })
+const folderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  position: z.number(),
+  instructions: z.string(),
+  sinapseIds: z.array(z.string()),
+})
+
+const folderColumns = {
+  id: folders.id,
+  name: folders.name,
+  position: folders.position,
+  instructions: folders.instructions,
+  sinapseIds: folders.sinapseIds,
+}
+
+/** Sinapses de um projeto precisam existir (e não estar apagadas). */
+async function checkSinapses(ids: string[] | undefined) {
+  if (!ids?.length) return
+  const rows = await db
+    .select({ id: sinapses.id })
+    .from(sinapses)
+    .where(and(inArray(sinapses.id, ids), isNull(sinapses.deletedAt)))
+  if (rows.length !== new Set(ids).size) throw notFound("Sinapse")
+}
 
 const conversationSettings = z
   .object({
     reasoningEffort: z.string(),
     webSearch: z.boolean(),
     imageGeneration: z.boolean(),
+    codeInterpreter: z.boolean(),
+    /** D71: ignorada pelos modelos de raciocínio. */
+    temperature: z.number().min(0).max(2).nullable(),
   })
   .partial()
 
@@ -79,7 +111,13 @@ const patchBody = z
 
 const toConversation = (row: typeof conversations.$inferSelect) =>
   conversationSchema.parse(jsonDates(row))
-export const toMessage = (row: typeof messages.$inferSelect) => messageSchema.parse(jsonDates(row))
+export const toMessage = (row: typeof messages.$inferSelect) =>
+  messageSchema.parse(
+    jsonDates({
+      ...row,
+      contextTokens: (row.params as { contextTokens?: number } | null)?.contextTokens ?? null,
+    }),
+  )
 
 export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
@@ -202,6 +240,78 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   )
 
+  app.post(
+    "/conversations/:id/fork",
+    {
+      schema: {
+        tags: ["conversations"],
+        summary: "Abrir em nova conversa: copia o ramo até a mensagem escolhida",
+        params: z.object({ id }),
+        body: z.object({ messageId: id }),
+        response: withErrors({ 201: conversationSchema }),
+      },
+    },
+    async (request, reply) => {
+      const source = await getConversation(request.params.id)
+      const all = await listMessages(source.id)
+      if (!all.some((message) => message.id === request.body.messageId)) throw notFound("Mensagem")
+      const path = branchTo(all, request.body.messageId)
+
+      const created = await db.transaction(async (tx) => {
+        const [conversation] = await tx
+          .insert(conversations)
+          .values({
+            title: source.title ? `${source.title} (cópia)`.slice(0, 200) : null,
+            folderId: source.folderId,
+            model: source.model,
+            systemPrompt: source.systemPrompt,
+            settings: source.settings,
+            anonymous: source.anonymous,
+          })
+          .returning()
+        // Cópia fiel (D27 vale para as duas): mesmos conteúdos e horários, ids novos.
+        let parentId: string | null = null
+        for (const message of path) {
+          const [copy]: { id: string }[] = await tx
+            .insert(messages)
+            .values({
+              conversationId: conversation!.id,
+              parentId,
+              role: message.role,
+              content: message.content,
+              contentText: message.contentText,
+              model: message.model,
+              params: message.params,
+              status: message.status,
+              error: message.error,
+              tokensIn: message.tokensIn,
+              tokensCached: message.tokensCached,
+              tokensOut: message.tokensOut,
+              tokensReasoning: message.tokensReasoning,
+              costUsd: message.costUsd,
+              createdAt: message.createdAt,
+              completedAt: message.completedAt,
+            })
+            .returning({ id: messages.id })
+          parentId = copy!.id
+        }
+        const [row] = await tx
+          .update(conversations)
+          .set({ currentLeafMessageId: parentId })
+          .where(eq(conversations.id, conversation!.id))
+          .returning()
+        return row!
+      })
+
+      const copied = await db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(eq(messages.conversationId, created.id))
+      if (copied.length) await enqueue("messages.embed", { messageIds: copied.map((m) => m.id) })
+      return reply.code(201).send(toConversation(created))
+    },
+  )
+
   app.delete(
     "/conversations/:id",
     {
@@ -276,7 +386,7 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async () => ({
       folders: await db
-        .select({ id: folders.id, name: folders.name, position: folders.position })
+        .select(folderColumns)
         .from(folders)
         .orderBy(asc(folders.position), asc(folders.name)),
     }),
@@ -287,19 +397,24 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: ["folders"],
-        summary: "Criar pasta",
-        body: z.object({ name: z.string().trim().min(1).max(80) }),
+        summary: "Criar projeto (pasta)",
+        body: z.object({
+          name: z.string().trim().min(1).max(80),
+          instructions: z.string().max(8_000).optional(),
+          sinapseIds: z.array(id).max(20).optional(),
+        }),
         response: withErrors({ 201: folderSchema }),
       },
     },
     async (request, reply) => {
+      await checkSinapses(request.body.sinapseIds)
       const [{ next } = { next: 0 }] = await db
         .select({ next: sql<number>`coalesce(max(${folders.position}), -1)::int + 1` })
         .from(folders)
       const [row] = await db
         .insert(folders)
-        .values({ name: request.body.name, position: next })
-        .returning({ id: folders.id, name: folders.name, position: folders.position })
+        .values({ ...request.body, position: next })
+        .returning(folderColumns)
       return reply.code(201).send(row!)
     },
   )
@@ -309,20 +424,26 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: ["folders"],
-        summary: "Renomear ou reordenar pasta",
+        summary: "Renomear, reordenar ou configurar o projeto (instruções e sinapses, D73)",
         params: z.object({ id }),
         body: z
-          .object({ name: z.string().trim().min(1).max(80), position: z.number().int() })
+          .object({
+            name: z.string().trim().min(1).max(80),
+            position: z.number().int(),
+            instructions: z.string().max(8_000),
+            sinapseIds: z.array(id).max(20),
+          })
           .partial(),
         response: withErrors({ 200: folderSchema }),
       },
     },
     async (request) => {
+      await checkSinapses(request.body.sinapseIds)
       const [row] = await db
         .update(folders)
-        .set(request.body)
+        .set({ ...request.body, updatedAt: new Date() })
         .where(eq(folders.id, request.params.id))
-        .returning({ id: folders.id, name: folders.name, position: folders.position })
+        .returning(folderColumns)
       if (!row) throw notFound("Pasta")
       return row
     },
@@ -333,7 +454,7 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       schema: {
         tags: ["folders"],
-        summary: "Apagar pasta (as conversas saem da pasta, não são apagadas)",
+        summary: "Apagar projeto (as conversas e arquivos saem dele, não são apagados)",
         params: z.object({ id }),
         response: withErrors({ 204: z.null() }),
       },

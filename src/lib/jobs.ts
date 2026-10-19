@@ -14,6 +14,8 @@ export type JobName =
   | "models.sync"
   | "sinapses.reindex-all"
   | "backups.run"
+  | "conversation.compact"
+  | "feedback.learn"
 
 type Handler = (data: Record<string, unknown>) => Promise<void>
 
@@ -23,6 +25,8 @@ const STATELY = new Set<JobName>([
   "models.sync",
   "sinapses.reindex-all",
   "backups.run",
+  "conversation.compact",
+  "feedback.learn",
 ])
 
 const handlers = new Map<JobName, Handler>()

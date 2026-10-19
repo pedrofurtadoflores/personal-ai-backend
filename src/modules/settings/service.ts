@@ -55,6 +55,39 @@ export const appSettingsSchema = z.object({
   alertThreshold: z.number().min(0.1).max(1).default(0.8),
   /** Preço por chamada da tool de busca web (página de preços: US$ 10 / 1k chamadas). */
   webSearchUsdPerCall: z.number().min(0).default(0.01),
+  /** Preço por container do interpretador de código (página de preços: US$ 0,03 por sessão). */
+  codeInterpreterUsdPerContainer: z.number().min(0).default(0.03),
+  /**
+   * D67: teto de tokens do histórico enviado a cada resposta. Acima disso, o começo da conversa
+   * vira um resumo. Também respeita a janela do modelo, quando o catálogo a conhece.
+   */
+  contextBudgetTokens: z.number().int().min(8_000).max(1_000_000).default(60_000),
+  /** D76: prompts salvos, usados com "/" no composer. */
+  savedPrompts: z
+    .array(
+      z.object({
+        name: z
+          .string()
+          .trim()
+          .min(1)
+          .max(40)
+          .regex(/^[\p{L}\p{N}_-]+$/u),
+        text: z.string().trim().min(1).max(4_000),
+      }),
+    )
+    .max(50)
+    .default([
+      {
+        name: "resumir",
+        text: "Resuma o texto abaixo em tópicos curtos, sem perder números e nomes:",
+      },
+      { name: "traduzir", text: "Traduza o texto abaixo para o inglês, mantendo o tom:" },
+      {
+        name: "revisar",
+        text: "Revise o texto abaixo: corrija gramática e clareza e explique as mudanças principais.",
+      },
+      { name: "explicar", text: "Explique de forma simples, com um exemplo concreto:" },
+    ]),
 })
 
 export type AppSettings = z.infer<typeof appSettingsSchema>
@@ -64,6 +97,8 @@ export const appSettingsPatch = appSettingsSchema.partial()
 export const internalKeys = {
   sessionVersion: "auth.session_version",
   aboutMeSinapseId: "sinapses.about_me_id",
+  responsePrefsSinapseId: "sinapses.response_prefs_id",
+  chatSuggestions: "chat.suggestions",
   modelsSyncedAt: "models.synced_at",
 } as const
 

@@ -12,12 +12,24 @@ export function isTextLike(mime: string, name: string) {
   return TEXT_TYPES.test(mime) || TEXT_EXTENSIONS.test(name)
 }
 
+/** Planilhas: sem texto extraído, mas o interpretador de código lê (D74). */
+const SPREADSHEET = /\.(xlsx|xls|ods|parquet)$/i
+
+export function isSpreadsheet(mime: string, name: string) {
+  return (
+    SPREADSHEET.test(name) ||
+    mime === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    mime === "application/vnd.ms-excel"
+  )
+}
+
 export function isSupported(mime: string, name: string) {
   return (
     mime.startsWith("image/") ||
     mime === "application/pdf" ||
     mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    isTextLike(mime, name)
+    isTextLike(mime, name) ||
+    isSpreadsheet(mime, name)
   )
 }
 

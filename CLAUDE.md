@@ -23,7 +23,7 @@ Leia `../plan.md` (decisões e fases) e `../CLAUDE.md` (convenções comuns).
 
 ## Módulos (src/modules)
 
-- `chat/`: `orchestrator.ts` (streaming, loop de tools, custo; parar salva o parcial), `context.ts` (instruções estáveis → histórico → RAG antes da última mensagem, D41), `tools.ts` (tools de sinapse, D37/D57), `parts.ts` (formato de `messages.content`), `jobs.ts` (título, embeddings).
+- `chat/`: `orchestrator.ts` (streaming, loop de tools, custo, `incomplete` e continuar; parar salva o parcial), `runs.ts` (respostas em andamento fora da conexão + trava de uma por conversa, D66/D68), `context.ts` (instruções estáveis → resumo → histórico → RAG antes da última mensagem, D41; projetos, menções, fontes e imagens das respostas antigas), `compaction.ts` (orçamento de contexto e resumos, D67), `tools.ts` (tools de sinapse e `fetch_url`, D37/D57), `fetch-url.ts` (leitura de páginas com proteção contra SSRF, D75), `code-interpreter.ts` (containers, D74), `feedback.ts` (👍/👎 → "Preferências de resposta", D77), `suggestions.ts` (sugestões da tela inicial, D72), `parts.ts` (formato de `messages.content`), `jobs.ts` (título, embeddings).
 - `sinapses/`: `service.ts` (toda escrita gera versão; reindexa chunks), `consolidation.ts` (job pós-ociosidade, D58), `links.ts`.
 - `conversations/`, `files/` (R2 + extração + chunks), `models/` (catálogo + sync), `usage/`, `settings/`, `search/`, `audio/` (ditado, TTS, sessão realtime, voice-turns), `backups/`.
 
@@ -33,4 +33,5 @@ Leia `../plan.md` (decisões e fases) e `../CLAUDE.md` (convenções comuns).
 - Todo consumo passa por `recordUsage()` (`src/lib/pricing.ts`); custo estimado marca `units.estimated`.
 - Jobs: `registerJob()` + `enqueue()` em `src/lib/jobs.ts`. Em testes a fila fica desligada: os jobs vão para `enqueuedJobs` e o teste chama `runJobNow()`.
 - Testes **nunca** chamam a OpenAI nem o R2: use `FakeOpenAI`/`FakeStorage` de `test/fakes.ts` (`setOpenAIClient`, `setStorage`).
-- Mudar o streaming: o contrato SSE é a D56 (`start`, `delta`, `part`, `image`, `status`, `error`, `done`); o front lê em `src/lib/chat/live.ts`.
+- Mudar o streaming: o contrato SSE é a D56 (`start`, `delta`, `part`, `image`, `status`, `error`, `done`); o front lê em `src/lib/chat/live.ts`. A geração roda num `Run` (D68): a rota só transmite, desconectar não para; parar é `POST /conversations/:id/stop` e retomar é `GET /conversations/:id/stream` (reenvia tudo desde o `start`).
+- Teste com OpenAI simulada: `FakeOpenAI` tem `rounds` (streaming), `texts` (chamadas sem streaming, ex.: resumo), `parsed` (saída estruturada), `failNext` e `containers` (interpretador de código).

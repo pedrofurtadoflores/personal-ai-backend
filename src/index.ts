@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm"
 import { buildApp } from "./app.js"
 import { env } from "./config/env.js"
+import { db } from "./db/client.js"
+import { messages } from "./db/schema.js"
 
 const SHUTDOWN_TIMEOUT_MS = 10_000
 
@@ -26,6 +29,16 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 try {
+  // Respostas que estavam sendo geradas quando o processo anterior caiu não vão terminar (D68).
+  // Fica aqui, e não no onReady, para scripts que sobem o app (ex.: openapi:export) não mexerem nisso.
+  await db
+    .update(messages)
+    .set({
+      status: "error",
+      error: "Resposta interrompida: o servidor reiniciou.",
+      completedAt: new Date(),
+    })
+    .where(eq(messages.status, "streaming"))
   await app.listen({ port: env.PORT, host: env.HOST })
 } catch (error) {
   app.log.error(error)

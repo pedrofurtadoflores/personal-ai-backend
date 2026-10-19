@@ -597,6 +597,60 @@
                           "default": 0.01,
                           "type": "number",
                           "minimum": 0
+                        },
+                        "codeInterpreterUsdPerContainer": {
+                          "default": 0.03,
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "contextBudgetTokens": {
+                          "default": 60000,
+                          "type": "integer",
+                          "minimum": 8000,
+                          "maximum": 1000000
+                        },
+                        "savedPrompts": {
+                          "default": [
+                            {
+                              "name": "resumir",
+                              "text": "Resuma o texto abaixo em tópicos curtos, sem perder números e nomes:"
+                            },
+                            {
+                              "name": "traduzir",
+                              "text": "Traduza o texto abaixo para o inglês, mantendo o tom:"
+                            },
+                            {
+                              "name": "revisar",
+                              "text": "Revise o texto abaixo: corrija gramática e clareza e explique as mudanças principais."
+                            },
+                            {
+                              "name": "explicar",
+                              "text": "Explique de forma simples, com um exemplo concreto:"
+                            }
+                          ],
+                          "maxItems": 50,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 40,
+                                "pattern": "^[\\p{L}\\p{N}_-]+$"
+                              },
+                              "text": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -616,7 +670,10 @@
                         "sinapsesConsolidationDelaySeconds",
                         "monthlyLimitUsd",
                         "alertThreshold",
-                        "webSearchUsdPerCall"
+                        "webSearchUsdPerCall",
+                        "codeInterpreterUsdPerContainer",
+                        "contextBudgetTokens",
+                        "savedPrompts"
                       ],
                       "additionalProperties": false
                     },
@@ -870,6 +927,59 @@
                     "default": 0.01,
                     "type": "number",
                     "minimum": 0
+                  },
+                  "codeInterpreterUsdPerContainer": {
+                    "default": 0.03,
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "contextBudgetTokens": {
+                    "default": 60000,
+                    "type": "integer",
+                    "minimum": 8000,
+                    "maximum": 1000000
+                  },
+                  "savedPrompts": {
+                    "default": [
+                      {
+                        "name": "resumir",
+                        "text": "Resuma o texto abaixo em tópicos curtos, sem perder números e nomes:"
+                      },
+                      {
+                        "name": "traduzir",
+                        "text": "Traduza o texto abaixo para o inglês, mantendo o tom:"
+                      },
+                      {
+                        "name": "revisar",
+                        "text": "Revise o texto abaixo: corrija gramática e clareza e explique as mudanças principais."
+                      },
+                      {
+                        "name": "explicar",
+                        "text": "Explique de forma simples, com um exemplo concreto:"
+                      }
+                    ],
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40,
+                          "pattern": "^[\\p{L}\\p{N}_-]+$"
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 4000
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "text"
+                      ]
+                    }
                   }
                 }
               }
@@ -1015,6 +1125,60 @@
                           "default": 0.01,
                           "type": "number",
                           "minimum": 0
+                        },
+                        "codeInterpreterUsdPerContainer": {
+                          "default": 0.03,
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "contextBudgetTokens": {
+                          "default": 60000,
+                          "type": "integer",
+                          "minimum": 8000,
+                          "maximum": 1000000
+                        },
+                        "savedPrompts": {
+                          "default": [
+                            {
+                              "name": "resumir",
+                              "text": "Resuma o texto abaixo em tópicos curtos, sem perder números e nomes:"
+                            },
+                            {
+                              "name": "traduzir",
+                              "text": "Traduza o texto abaixo para o inglês, mantendo o tom:"
+                            },
+                            {
+                              "name": "revisar",
+                              "text": "Revise o texto abaixo: corrija gramática e clareza e explique as mudanças principais."
+                            },
+                            {
+                              "name": "explicar",
+                              "text": "Explique de forma simples, com um exemplo concreto:"
+                            }
+                          ],
+                          "maxItems": 50,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 40,
+                                "pattern": "^[\\p{L}\\p{N}_-]+$"
+                              },
+                              "text": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4000
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -1034,7 +1198,10 @@
                         "sinapsesConsolidationDelaySeconds",
                         "monthlyLimitUsd",
                         "alertThreshold",
-                        "webSearchUsdPerCall"
+                        "webSearchUsdPerCall",
+                        "codeInterpreterUsdPerContainer",
+                        "contextBudgetTokens",
+                        "savedPrompts"
                       ],
                       "additionalProperties": false
                     },
@@ -2533,6 +2700,15 @@
                       },
                       "imageGeneration": {
                         "type": "boolean"
+                      },
+                      "codeInterpreter": {
+                        "type": "boolean"
+                      },
+                      "temperature": {
+                        "nullable": true,
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
                       }
                     }
                   }
@@ -3071,6 +3247,74 @@
                                     "detail"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "mention"
+                                      ]
+                                    },
+                                    "sinapseId": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "sinapseId",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "compacted"
+                                      ]
+                                    },
+                                    "messages": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "messages"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "code"
+                                      ]
+                                    },
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "logs": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "code",
+                                    "logs"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             }
@@ -3089,7 +3333,8 @@
                               "streaming",
                               "completed",
                               "stopped",
-                              "error"
+                              "error",
+                              "incomplete"
                             ]
                           },
                           "error": {
@@ -3113,6 +3358,22 @@
                             "type": "number"
                           },
                           "costUsd": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "rating": {
+                            "nullable": true,
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down"
+                            ]
+                          },
+                          "feedbackNote": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "contextTokens": {
                             "nullable": true,
                             "type": "number"
                           },
@@ -3143,6 +3404,9 @@
                           "tokensOut",
                           "tokensReasoning",
                           "costUsd",
+                          "rating",
+                          "feedbackNote",
+                          "contextTokens",
                           "createdAt",
                           "completedAt"
                         ],
@@ -3305,6 +3569,15 @@
                       },
                       "imageGeneration": {
                         "type": "boolean"
+                      },
+                      "codeInterpreter": {
+                        "type": "boolean"
+                      },
+                      "temperature": {
+                        "nullable": true,
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
                       }
                     }
                   }
@@ -3780,6 +4053,220 @@
         }
       }
     },
+    "/conversations/{id}/fork": {
+      "post": {
+        "summary": "Abrir em nova conversa: copia o ramo até a mensagem escolhida",
+        "tags": [
+          "conversations"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "messageId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "messageId"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "folderId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "model": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "systemPrompt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "anonymous": {
+                      "type": "boolean"
+                    },
+                    "pinned": {
+                      "type": "boolean"
+                    },
+                    "archived": {
+                      "type": "boolean"
+                    },
+                    "currentLeafMessageId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "deletedAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "folderId",
+                    "model",
+                    "systemPrompt",
+                    "settings",
+                    "anonymous",
+                    "pinned",
+                    "archived",
+                    "currentLeafMessageId",
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/conversations/{id}/restore": {
       "post": {
         "summary": "Restaurar da lixeira",
@@ -4129,12 +4616,23 @@
                           },
                           "position": {
                             "type": "number"
+                          },
+                          "instructions": {
+                            "type": "string"
+                          },
+                          "sinapseIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           }
                         },
                         "required": [
                           "id",
                           "name",
-                          "position"
+                          "position",
+                          "instructions",
+                          "sinapseIds"
                         ],
                         "additionalProperties": false
                       }
@@ -4243,7 +4741,7 @@
         }
       },
       "post": {
-        "summary": "Criar pasta",
+        "summary": "Criar projeto (pasta)",
         "tags": [
           "folders"
         ],
@@ -4258,6 +4756,19 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 80
+                  },
+                  "instructions": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "sinapseIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
                   }
                 },
                 "required": [
@@ -4283,12 +4794,23 @@
                     },
                     "position": {
                       "type": "number"
+                    },
+                    "instructions": {
+                      "type": "string"
+                    },
+                    "sinapseIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [
                     "id",
                     "name",
-                    "position"
+                    "position",
+                    "instructions",
+                    "sinapseIds"
                   ],
                   "additionalProperties": false
                 }
@@ -4392,7 +4914,7 @@
     },
     "/folders/{id}": {
       "patch": {
-        "summary": "Renomear ou reordenar pasta",
+        "summary": "Renomear, reordenar ou configurar o projeto (instruções e sinapses, D73)",
         "tags": [
           "folders"
         ],
@@ -4412,6 +4934,19 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
+                  },
+                  "instructions": {
+                    "type": "string",
+                    "maxLength": 8000
+                  },
+                  "sinapseIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
                   }
                 }
               }
@@ -4446,12 +4981,23 @@
                     },
                     "position": {
                       "type": "number"
+                    },
+                    "instructions": {
+                      "type": "string"
+                    },
+                    "sinapseIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
                   "required": [
                     "id",
                     "name",
-                    "position"
+                    "position",
+                    "instructions",
+                    "sinapseIds"
                   ],
                   "additionalProperties": false
                 }
@@ -4553,7 +5099,7 @@
         }
       },
       "delete": {
-        "summary": "Apagar pasta (as conversas saem da pasta, não são apagadas)",
+        "summary": "Apagar projeto (as conversas e arquivos saem dele, não são apagados)",
         "tags": [
           "folders"
         ],
@@ -4685,7 +5231,7 @@
         "tags": [
           "chat"
         ],
-        "description": "Resposta em Server-Sent Events: `start` {userMessage?, assistantMessage}, `delta` {text}, `part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, `error` {error, message} e `done` {message}.",
+        "description": "Resposta em Server-Sent Events: `start` {userMessage?, assistantMessage}, `delta` {text}, `part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, `error` {error, message} e `done` {message}. A geração não depende da conexão (D68): se ela cair, `GET /conversations/:id/stream` retoma desde o começo.",
         "requestBody": {
           "required": true,
           "content": {
@@ -4706,6 +5252,15 @@
                   "imageGeneration": {
                     "type": "boolean"
                   },
+                  "codeInterpreter": {
+                    "type": "boolean"
+                  },
+                  "temperature": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2
+                  },
                   "parentId": {
                     "nullable": true,
                     "type": "string",
@@ -4720,6 +5275,16 @@
                   "fileIds": {
                     "default": [],
                     "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "sinapseIds": {
+                    "default": [],
+                    "maxItems": 10,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -4860,7 +5425,7 @@
         "tags": [
           "chat"
         ],
-        "description": "Resposta em Server-Sent Events: `start` {userMessage?, assistantMessage}, `delta` {text}, `part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, `error` {error, message} e `done` {message}.",
+        "description": "Resposta em Server-Sent Events: `start` {userMessage?, assistantMessage}, `delta` {text}, `part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, `error` {error, message} e `done` {message}. A geração não depende da conexão (D68): se ela cair, `GET /conversations/:id/stream` retoma desde o começo.",
         "requestBody": {
           "required": true,
           "content": {
@@ -4881,6 +5446,15 @@
                   },
                   "imageGeneration": {
                     "type": "boolean"
+                  },
+                  "codeInterpreter": {
+                    "type": "boolean"
+                  },
+                  "temperature": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2
                   }
                 }
               }
@@ -5016,6 +5590,1155 @@
         }
       }
     },
+    "/conversations/{id}/messages/{messageId}/continue": {
+      "post": {
+        "summary": "Continuar uma resposta cortada ou interrompida (vira uma nova versão, D69)",
+        "tags": [
+          "chat"
+        ],
+        "description": "Resposta em Server-Sent Events: `start` {userMessage?, assistantMessage}, `delta` {text}, `part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, `error` {error, message} e `done` {message}. A geração não depende da conexão (D68): se ela cair, `GET /conversations/:id/stream` retoma desde o começo.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reasoningEffort": {
+                    "type": "string"
+                  },
+                  "webSearch": {
+                    "type": "boolean"
+                  },
+                  "imageGeneration": {
+                    "type": "boolean"
+                  },
+                  "codeInterpreter": {
+                    "type": "boolean"
+                  },
+                  "temperature": {
+                    "nullable": true,
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "messageId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "text/event-stream"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/stream": {
+      "get": {
+        "summary": "Retomar a resposta em andamento (D68): reenvia tudo desde o começo",
+        "tags": [
+          "chat"
+        ],
+        "description": "Resposta em Server-Sent Events: `start` {userMessage?, assistantMessage}, `delta` {text}, `part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, `error` {error, message} e `done` {message}. A geração não depende da conexão (D68): se ela cair, `GET /conversations/:id/stream` retoma desde o começo. Sem resposta em andamento: 204.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "description": "text/event-stream"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    null
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/stop": {
+      "post": {
+        "summary": "Parar a resposta em andamento (o parcial fica salvo como `stopped`)",
+        "tags": [
+          "chat"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stopped": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "stopped"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages/{messageId}/feedback": {
+      "put": {
+        "summary": "Avaliar uma resposta (👍/👎); com comentário, a IA aprende a preferência (D77)",
+        "tags": [
+          "chat"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "nullable": true,
+                    "type": "string",
+                    "enum": [
+                      "up",
+                      "down"
+                    ]
+                  },
+                  "note": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "rating"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "messageId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "conversationId": {
+                      "type": "string"
+                    },
+                    "parentId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "user",
+                        "assistant",
+                        "system",
+                        "tool"
+                      ]
+                    },
+                    "content": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "text"
+                                ]
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "file"
+                                ]
+                              },
+                              "fileId": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "mime": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "fileId",
+                              "name",
+                              "mime"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "image"
+                                ]
+                              },
+                              "fileId": {
+                                "type": "string"
+                              },
+                              "prompt": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "fileId",
+                              "prompt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "sources"
+                                ]
+                              },
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "url": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "url",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "items"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "sinapse"
+                                ]
+                              },
+                              "action": {
+                                "type": "string",
+                                "enum": [
+                                  "created",
+                                  "updated",
+                                  "linked",
+                                  "suggested"
+                                ]
+                              },
+                              "sinapseId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "versionId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "suggestionId": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "action",
+                              "sinapseId",
+                              "title",
+                              "versionId",
+                              "suggestionId"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "context"
+                                ]
+                              },
+                              "sinapses": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "files": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "sinapses",
+                              "files"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "tool"
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "detail"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "mention"
+                                ]
+                              },
+                              "sinapseId": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "sinapseId",
+                              "title"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "compacted"
+                                ]
+                              },
+                              "messages": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "messages"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "code"
+                                ]
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "logs": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "code",
+                              "logs"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "contentText": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "model": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "streaming",
+                        "completed",
+                        "stopped",
+                        "error",
+                        "incomplete"
+                      ]
+                    },
+                    "error": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "tokensIn": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tokensCached": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tokensOut": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tokensReasoning": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "costUsd": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "rating": {
+                      "nullable": true,
+                      "type": "string",
+                      "enum": [
+                        "up",
+                        "down"
+                      ]
+                    },
+                    "feedbackNote": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "contextTokens": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "completedAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "conversationId",
+                    "parentId",
+                    "role",
+                    "content",
+                    "contentText",
+                    "model",
+                    "status",
+                    "error",
+                    "tokensIn",
+                    "tokensCached",
+                    "tokensOut",
+                    "tokensReasoning",
+                    "costUsd",
+                    "rating",
+                    "feedbackNote",
+                    "contextTokens",
+                    "createdAt",
+                    "completedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat/suggestions": {
+      "get": {
+        "summary": "Sugestões da tela inicial, a partir da memória e das conversas recentes (D72)",
+        "tags": [
+          "chat"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "suggestions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "personalized": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "suggestions",
+                    "personalized"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/files": {
       "post": {
         "summary": "Iniciar upload: devolve a URL assinada para o PUT direto no R2",
@@ -5046,6 +6769,12 @@
                     "maximum": 52428800
                   },
                   "conversationId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "folderId": {
                     "nullable": true,
                     "type": "string",
                     "format": "uuid",
@@ -5095,6 +6824,10 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "folderId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -5125,6 +6858,7 @@
                         "size",
                         "origin",
                         "conversationId",
+                        "folderId",
                         "status",
                         "error",
                         "hasText",
@@ -5266,6 +7000,16 @@
             "in": "query",
             "name": "conversationId",
             "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "query",
+            "name": "folderId",
+            "required": false
           }
         ],
         "responses": {
@@ -5304,6 +7048,10 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "folderId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "status": {
                             "type": "string",
                             "enum": [
@@ -5334,6 +7082,7 @@
                           "size",
                           "origin",
                           "conversationId",
+                          "folderId",
                           "status",
                           "error",
                           "hasText",
@@ -5495,6 +7244,10 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "folderId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -5525,6 +7278,7 @@
                     "size",
                     "origin",
                     "conversationId",
+                    "folderId",
                     "status",
                     "error",
                     "hasText",
@@ -5690,6 +7444,10 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "folderId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -5720,6 +7478,7 @@
                         "size",
                         "origin",
                         "conversationId",
+                        "folderId",
                         "status",
                         "error",
                         "hasText",
@@ -10142,6 +11901,74 @@
                                     "detail"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "mention"
+                                      ]
+                                    },
+                                    "sinapseId": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "sinapseId",
+                                    "title"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "compacted"
+                                      ]
+                                    },
+                                    "messages": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "messages"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "code"
+                                      ]
+                                    },
+                                    "code": {
+                                      "type": "string"
+                                    },
+                                    "logs": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "code",
+                                    "logs"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             }
@@ -10160,7 +11987,8 @@
                               "streaming",
                               "completed",
                               "stopped",
-                              "error"
+                              "error",
+                              "incomplete"
                             ]
                           },
                           "error": {
@@ -10184,6 +12012,22 @@
                             "type": "number"
                           },
                           "costUsd": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "rating": {
+                            "nullable": true,
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down"
+                            ]
+                          },
+                          "feedbackNote": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "contextTokens": {
                             "nullable": true,
                             "type": "number"
                           },
@@ -10214,6 +12058,9 @@
                           "tokensOut",
                           "tokensReasoning",
                           "costUsd",
+                          "rating",
+                          "feedbackNote",
+                          "contextTokens",
                           "createdAt",
                           "completedAt"
                         ],

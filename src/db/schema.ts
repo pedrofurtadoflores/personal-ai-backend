@@ -46,6 +46,8 @@ export const messageStatus = pgEnum("message_status", [
   "completed",
   "stopped",
   "error",
+  /** A OpenAI cortou a resposta (limite de saída ou filtro): dá para continuar (D69). */
+  "incomplete",
 ])
 export const author = pgEnum("author", ["ai", "user"])
 export const sinapseStatus = pgEnum("sinapse_status", ["active", "archived"])
@@ -71,10 +73,18 @@ export const usageSource = pgEnum("usage_source", [
 
 // ─── Conversas e mensagens ──────────────────────────────────────────────────
 
+/** Pastas são os "Projetos" da interface (D73): instruções, sinapses e arquivos próprios. */
 export const folders = pgTable("folders", {
   id: id(),
   name: text().notNull(),
   position: integer().notNull().default(0),
+  /** Instruções que valem para todas as conversas do projeto. */
+  instructions: text().notNull().default(""),
+  /** Sinapses fixadas só nas conversas deste projeto. */
+  sinapseIds: uuid()
+    .array()
+    .notNull()
+    .default(sql`'{}'::uuid[]`),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 })
@@ -138,6 +148,9 @@ export const messages = pgTable(
     tokensOut: integer(),
     tokensReasoning: integer(),
     costUsd: usd(),
+    /** Avaliação do usuário (👍/👎) e o comentário opcional (D77). */
+    rating: text().$type<"up" | "down">(),
+    feedbackNote: text(),
     createdAt: createdAt(),
     completedAt: timestamp({ withTimezone: true }),
     deletedAt: deletedAt(),
@@ -147,6 +160,29 @@ export const messages = pgTable(
     index().on(t.parentId),
     index().using("gin", t.searchVector),
   ],
+)
+
+/**
+ * Resumo do começo de um ramo (D67): cobre da raiz até `up_to_message_id`, inclusive.
+ * Vale para qualquer ramo que passe por essa mensagem; nada do histórico é apagado.
+ */
+export const conversationSummaries = pgTable(
+  "conversation_summaries",
+  {
+    id: id(),
+    conversationId: uuid()
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    upToMessageId: uuid()
+      .notNull()
+      .references(() => messages.id, { onDelete: "cascade" }),
+    summary: text().notNull(),
+    /** Quantas mensagens do ramo o resumo cobre. */
+    messagesCount: integer().notNull(),
+    model: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.conversationId, t.createdAt)],
 )
 
 export const messageEmbeddings = pgTable(
@@ -319,13 +355,15 @@ export const files = pgTable(
     origin: fileOrigin().notNull().default("upload"),
     /** Conversa onde o arquivo entrou (para o RAG daquela conversa). */
     conversationId: uuid().references(() => conversations.id, { onDelete: "set null" }),
+    /** Arquivo do projeto: entra no RAG de todas as conversas da pasta (D73). */
+    folderId: uuid().references(() => folders.id, { onDelete: "set null" }),
     extractedText: text(),
     status: fileStatus().notNull().default("pending"),
     error: text(),
     createdAt: createdAt(),
     deletedAt: deletedAt(),
   },
-  (t) => [index().on(t.createdAt), index().on(t.conversationId)],
+  (t) => [index().on(t.createdAt), index().on(t.conversationId), index().on(t.folderId)],
 )
 
 /** Backups do banco enviados ao R2 (D39). */

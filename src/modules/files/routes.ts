@@ -2,8 +2,8 @@ import { and, desc, eq, isNull } from "drizzle-orm"
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod"
 import { z } from "zod"
 import { db } from "../../db/client.js"
-import { files, generatedImages } from "../../db/schema.js"
-import { withErrors } from "../../lib/http.js"
+import { files, folders, generatedImages } from "../../db/schema.js"
+import { notFound, withErrors } from "../../lib/http.js"
 import { enqueue } from "../../lib/jobs.js"
 import { isoDate, jsonDates } from "../../lib/serialize.js"
 import { MAX_UPLOAD_BYTES } from "./extract.js"
@@ -18,6 +18,7 @@ export const fileSchema = z.object({
   size: z.number(),
   origin: z.enum(["upload", "generated"]),
   conversationId: z.string().nullable(),
+  folderId: z.string().nullable(),
   status: z.enum(["pending", "uploaded", "processing", "ready", "error"]),
   error: z.string().nullable(),
   hasText: z.boolean(),
@@ -40,11 +41,20 @@ export const fileRoutes: FastifyPluginAsyncZod = async (app) => {
           mime: z.string().min(1).max(200),
           size: z.number().int().positive().max(MAX_UPLOAD_BYTES),
           conversationId: id.nullable().optional(),
+          /** Arquivo de projeto (D73). */
+          folderId: id.nullable().optional(),
         }),
         response: withErrors({ 201: z.object({ file: fileSchema, uploadUrl: z.string() }) }),
       },
     },
     async (request, reply) => {
+      if (request.body.folderId) {
+        const [folder] = await db
+          .select({ id: folders.id })
+          .from(folders)
+          .where(eq(folders.id, request.body.folderId))
+        if (!folder) throw notFound("Projeto")
+      }
       const { file, uploadUrl } = await createUpload(request.body)
       return reply.code(201).send({ file: toFile(file), uploadUrl })
     },
@@ -72,6 +82,7 @@ export const fileRoutes: FastifyPluginAsyncZod = async (app) => {
         querystring: z.object({
           origin: z.enum(["upload", "generated"]).optional(),
           conversationId: id.optional(),
+          folderId: id.optional(),
         }),
         response: withErrors({ 200: z.object({ files: z.array(fileSchema) }) }),
       },
@@ -87,6 +98,7 @@ export const fileRoutes: FastifyPluginAsyncZod = async (app) => {
             request.query.conversationId
               ? eq(files.conversationId, request.query.conversationId)
               : undefined,
+            request.query.folderId ? eq(files.folderId, request.query.folderId) : undefined,
           ),
         )
         .orderBy(desc(files.createdAt))
