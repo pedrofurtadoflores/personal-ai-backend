@@ -29,6 +29,25 @@ const sseDescription =
   "`part` (chip de sinapse, contexto, busca), `image` {fileId, url}, `status` {tool, state}, " +
   "`error` {error, message} e `done` {message}."
 
+/**
+ * Conversas com resposta em andamento (D66). Fica em memória porque o backend roda num
+ * processo só; se ele reiniciar no meio, o lock some junto com a resposta.
+ */
+const replying = new Set<string>()
+
+/** Roda `fn` com a conversa marcada como ocupada; recusa com 409 se ela já estiver. */
+async function withConversationLock<T>(conversationId: string, fn: () => Promise<T>) {
+  if (replying.has(conversationId)) {
+    throw new HttpError(409, "reply_in_progress", "Espere a resposta atual terminar.")
+  }
+  replying.add(conversationId)
+  try {
+    return await fn()
+  } finally {
+    replying.delete(conversationId)
+  }
+}
+
 /** Abre o SSE, cria a mensagem do assistente e gera a resposta. */
 async function streamReply(params: {
   reply: Parameters<typeof openSse>[0]
@@ -107,43 +126,51 @@ export const chatRoutes: FastifyPluginAsyncZod = async (app) => {
         if (!parent) throw notFound("Mensagem")
       }
 
-      const attached = fileIds.length
-        ? await db
-            .select()
-            .from(files)
-            .where(and(inArray(files.id, fileIds), isNull(files.deletedAt)))
-        : []
-      if (attached.length !== fileIds.length) throw notFound("Arquivo")
-      // Arquivos soltos passam a pertencer a esta conversa (entram no RAG dela).
-      if (attached.length) {
-        await db
-          .update(files)
-          .set({ conversationId: conversation.id })
-          .where(and(inArray(files.id, fileIds), isNull(files.conversationId)))
-      }
+      await withConversationLock(conversation.id, async () => {
+        const attached = fileIds.length
+          ? await db
+              .select()
+              .from(files)
+              .where(and(inArray(files.id, fileIds), isNull(files.deletedAt)))
+          : []
+        if (attached.length !== fileIds.length) throw notFound("Arquivo")
+        // Arquivos soltos passam a pertencer a esta conversa (entram no RAG dela).
+        if (attached.length) {
+          await db
+            .update(files)
+            .set({ conversationId: conversation.id })
+            .where(and(inArray(files.id, fileIds), isNull(files.conversationId)))
+        }
 
-      const content: MessagePart[] = [
-        ...attached.map((file) => ({
-          type: "file" as const,
-          fileId: file.id,
-          name: file.name,
-          mime: file.mime,
-        })),
-        ...(text.trim() ? [{ type: "text" as const, text }] : []),
-      ]
-      const [userMessage] = await db
-        .insert(messages)
-        .values({
-          conversationId: conversation.id,
-          parentId,
-          role: "user",
-          content,
-          contentText: text.trim() || null,
-          completedAt: new Date(),
+        const content: MessagePart[] = [
+          ...attached.map((file) => ({
+            type: "file" as const,
+            fileId: file.id,
+            name: file.name,
+            mime: file.mime,
+          })),
+          ...(text.trim() ? [{ type: "text" as const, text }] : []),
+        ]
+        const [userMessage] = await db
+          .insert(messages)
+          .values({
+            conversationId: conversation.id,
+            parentId,
+            role: "user",
+            content,
+            contentText: text.trim() || null,
+            completedAt: new Date(),
+          })
+          .returning()
+
+        await streamReply({
+          reply,
+          conversation,
+          userMessage: userMessage!,
+          options,
+          sendUser: true,
         })
-        .returning()
-
-      await streamReply({ reply, conversation, userMessage: userMessage!, options, sendUser: true })
+      })
       return reply
     },
   )
@@ -186,13 +213,15 @@ export const chatRoutes: FastifyPluginAsyncZod = async (app) => {
       }
       if (userMessage.role !== "user") throw new HttpError(400, "bad_request", "Mensagem inválida.")
 
-      await streamReply({
-        reply,
-        conversation,
-        userMessage,
-        options: request.body,
-        sendUser: false,
-      })
+      await withConversationLock(conversation.id, () =>
+        streamReply({
+          reply,
+          conversation,
+          userMessage,
+          options: request.body,
+          sendUser: false,
+        }),
+      )
       return reply
     },
   )

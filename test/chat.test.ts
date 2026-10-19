@@ -249,6 +249,29 @@ describe("chat em streaming", () => {
     expect(enqueuedJobs.some((job) => job.name === "sinapses.consolidate")).toBe(false)
   })
 
+  it("recusa outra mensagem enquanto a resposta está em andamento (D66)", async () => {
+    const id = await newConversation()
+    fake.rounds = [textRound("uma resposta comprida o bastante para durar alguns ms")]
+    const post = () =>
+      app.inject({
+        method: "POST",
+        url: `/conversations/${id}/messages`,
+        headers: auth,
+        payload: { parentId: null, text: "oi" },
+      })
+    // Qualquer uma das duas pode chegar primeiro.
+    const results = await Promise.all([post(), post()])
+    expect(results.map((result) => result.statusCode).sort()).toEqual([200, 409])
+    const refused = results.find((result) => result.statusCode === 409)!
+    expect(refused.json()).toMatchObject({ error: "reply_in_progress" })
+
+    // Terminada a resposta, a conversa volta a aceitar mensagens.
+    const userMessages = await db.select().from(messages).where(eq(messages.conversationId, id))
+    expect(userMessages.filter((message) => message.role === "user")).toHaveLength(1)
+    const events = await send(id, { text: "de novo" })
+    expect(doneMessage(events).status).toBe("completed")
+  })
+
   it("recusa mensagem vazia e pai de outra conversa", async () => {
     const id = await newConversation()
     const empty = await app.inject({
