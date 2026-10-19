@@ -6,7 +6,7 @@ import { conversations, messages, sinapseSuggestions, sinapses } from "../src/db
 import { enqueuedJobs } from "../src/lib/jobs.js"
 import { setOpenAIClient } from "../src/lib/openai.js"
 import { consolidateConversation } from "../src/modules/sinapses/consolidation.js"
-import { applySectionOperation } from "../src/modules/sinapses/service.js"
+import { applySectionOperation, normalizeContent } from "../src/modules/sinapses/service.js"
 import { FakeOpenAI, resetData } from "./fakes.js"
 import { bearer, loginToken } from "./helpers.js"
 
@@ -294,5 +294,26 @@ describe("applySectionOperation", () => {
     expect(
       applySectionOperation(doc, "append_section", "E", "cinco").endsWith("## E\n\ncinco"),
     ).toBe(true)
+  })
+  it("não repete o título quando o corpo já começa com ele", () => {
+    expect(applySectionOperation(doc, "replace_section", "B", "## B\n\nnovo")).toBe(
+      "## A\n\num\n\n## B\n\nnovo\n\n## C\n\ntrês",
+    )
+    expect(applySectionOperation(doc, "append_section", "E", "### e\n\ncinco")).toBe(
+      `${doc}\n\n## E\n\ncinco`,
+    )
+  })
+})
+
+describe("normalizeContent", () => {
+  it("tira o título da sinapse do topo e junta títulos repetidos em sequência", () => {
+    const content =
+      "# Sobre mim\n\n## Quem sou\n\nPedro\n\n## Preferências\n\n## Preferências\n\n- pt-BR"
+    expect(normalizeContent("Sobre mim", content)).toBe(
+      "## Quem sou\n\nPedro\n\n## Preferências\n\n- pt-BR",
+    )
+  })
+  it("mantém um primeiro título diferente do título da sinapse", () => {
+    expect(normalizeContent("Sobre mim", "# Outro\n\ntexto")).toBe("# Outro\n\ntexto")
   })
 })

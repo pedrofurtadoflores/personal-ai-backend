@@ -213,13 +213,14 @@ export async function reindexSinapse(
 }
 
 export async function createSinapse(input: SinapseInput, context: WriteContext) {
+  const title = input.title.trim().slice(0, 120)
   const [row] = await db
     .insert(sinapses)
     .values({
-      title: input.title.trim().slice(0, 120),
+      title,
       emoji: input.emoji ?? null,
       summary: input.summary.trim(),
-      content: input.content.trim(),
+      content: normalizeContent(title, input.content),
       tags: normalizeTags(input.tags),
       createdBy: context.author,
     })
@@ -239,13 +240,14 @@ export async function updateSinapse(
   context: WriteContext,
 ) {
   const current = await getSinapse(id)
+  const title = patch.title !== undefined ? patch.title.trim().slice(0, 120) : current.title
   const [row] = await db
     .update(sinapses)
     .set({
-      ...(patch.title !== undefined ? { title: patch.title.trim().slice(0, 120) } : {}),
+      ...(patch.title !== undefined ? { title } : {}),
       ...(patch.emoji !== undefined ? { emoji: patch.emoji } : {}),
       ...(patch.summary !== undefined ? { summary: patch.summary.trim() } : {}),
-      ...(patch.content !== undefined ? { content: patch.content.trim() } : {}),
+      ...(patch.content !== undefined ? { content: normalizeContent(title, patch.content) } : {}),
       ...(patch.tags !== undefined ? { tags: normalizeTags(patch.tags) } : {}),
       ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
       ...(patch.pinned !== undefined ? { pinned: patch.pinned } : {}),
@@ -264,27 +266,59 @@ export async function updateSinapse(
   return { sinapse: row!, versionId }
 }
 
+const headingText = (line: string) =>
+  line
+    .replace(/^#+\s*/, "")
+    .trim()
+    .toLowerCase()
+
+/** Tira do início do markdown um título (de qualquer nível) igual a `title`. */
+function stripLeadingHeading(markdown: string, title: string) {
+  const text = markdown.trim()
+  const firstLine = text.split("\n", 1)[0]!
+  if (!/^#{1,6}\s/.test(firstLine) || headingText(firstLine) !== title.trim().toLowerCase()) {
+    return text
+  }
+  return text.slice(firstLine.length).trim()
+}
+
+/**
+ * Arruma o markdown antes de gravar: a página já mostra o título da sinapse, então um
+ * "# Título" no topo sai; e títulos iguais em sequência, sem nada entre eles, viram um só.
+ */
+export function normalizeContent(title: string, content: string) {
+  const lines = stripLeadingHeading(content, title).split("\n")
+  const result: string[] = []
+  let previous = ""
+  for (const line of lines) {
+    if (/^#{1,6}\s/.test(line) && previous === line.trim()) continue
+    result.push(line)
+    if (line.trim()) previous = line.trim()
+  }
+  return result
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 /** Aplica uma operação de seção sobre o markdown (usada pela IA). */
 export function applySectionOperation(
   content: string,
   operation: "append_section" | "replace_section" | "replace_all",
   sectionTitle: string,
-  body: string,
+  rawBody: string,
 ) {
-  if (operation === "replace_all") return body.trim()
+  if (operation === "replace_all") return rawBody.trim()
   const heading = sectionTitle.trim()
+  // A IA costuma repetir o título da seção no começo do corpo.
+  const body = heading ? stripLeadingHeading(rawBody, heading) : rawBody
   if (operation === "append_section" || !heading) {
     return `${content.trim()}\n\n${heading ? `## ${heading}\n\n` : ""}${body.trim()}`.trim()
   }
   // replace_section: troca do "## Título" até o próximo título de mesmo nível ou superior.
   const lines = content.split("\n")
   const start = lines.findIndex(
-    (line) =>
-      /^#{1,3}\s/.test(line) &&
-      line
-        .replace(/^#+\s*/, "")
-        .trim()
-        .toLowerCase() === heading.toLowerCase(),
+    (line) => /^#{1,3}\s/.test(line) && headingText(line) === heading.toLowerCase(),
   )
   if (start === -1) return `${content.trim()}\n\n## ${heading}\n\n${body.trim()}`.trim()
   const level = lines[start]!.match(/^#+/)![0].length
