@@ -16,6 +16,7 @@ export type JobName =
   | "backups.run"
   | "conversation.compact"
   | "feedback.learn"
+  | "finance.categorize"
 
 type Handler = (data: Record<string, unknown>) => Promise<void>
 
@@ -27,6 +28,7 @@ const STATELY = new Set<JobName>([
   "backups.run",
   "conversation.compact",
   "feedback.learn",
+  "finance.categorize",
 ])
 
 const handlers = new Map<JobName, Handler>()

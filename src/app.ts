@@ -24,6 +24,7 @@ import { chatRoutes } from "./modules/chat/routes.js"
 import { stopAllRuns } from "./modules/chat/runs.js"
 import { conversationRoutes } from "./modules/conversations/routes.js"
 import { fileRoutes } from "./modules/files/routes.js"
+import { financeRoutes } from "./modules/finance/routes.js"
 import { healthRoutes } from "./modules/health/routes.js"
 import { modelRoutes } from "./modules/models/routes.js"
 import "./modules/models/service.js"
@@ -175,6 +176,7 @@ export async function buildApp() {
   await app.register(searchRoutes)
   await app.register(audioRoutes)
   await app.register(backupRoutes)
+  await app.register(financeRoutes)
 
   return app
 }

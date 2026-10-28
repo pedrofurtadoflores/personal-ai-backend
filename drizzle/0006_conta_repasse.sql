@@ -1,0 +1,1 @@
+ALTER TABLE "fin_accounts" ADD COLUMN "track_balance" boolean DEFAULT true NOT NULL;

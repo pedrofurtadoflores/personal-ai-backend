@@ -22,7 +22,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "hash-password": "tsx scripts/hash-password.ts",
-    "openapi:export": "tsx scripts/export-openapi.ts"
+    "openapi:export": "tsx scripts/export-openapi.ts",
+    "finance:seed": "tsx scripts/finance-seed.ts"
   },
   "repository": {
     "type": "git",

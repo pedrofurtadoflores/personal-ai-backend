@@ -29,6 +29,34 @@
       "when": 1792421570213,
       "tag": "0003_chat_improvements",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793195699778,
+      "tag": "0004_financeiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793211728017,
+      "tag": "0005_contas_sem_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793212127506,
+      "tag": "0006_conta_repasse",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793219040038,
+      "tag": "0007_dividas",
+      "breakpoints": true
     }
   ]
 }

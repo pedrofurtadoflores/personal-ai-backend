@@ -5,6 +5,7 @@ import {
   boolean,
   check,
   customType,
+  date,
   index,
   integer,
   jsonb,
@@ -12,6 +13,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -489,4 +491,362 @@ export const loginThrottle = pgTable(
     lastFailureAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.lastFailureAt)],
+)
+
+// ─── Financeiro (ver financeiro.md) ─────────────────────────────────────────
+
+/** Dinheiro sempre em centavos inteiros (F03). Negativo = saiu, positivo = entrou. */
+const cents = () => bigint({ mode: "number" })
+/** Datas de lançamento são dias locais, sem fuso (F04). */
+const day = () => date({ mode: "string" })
+
+export const finAccountType = pgEnum("fin_account_type", [
+  "checking",
+  "credit_card",
+  "cash",
+  "other",
+])
+export const finInstitution = pgEnum("fin_institution", ["nubank", "bradesco", "other"])
+export const finCategoryKind = pgEnum("fin_category_kind", ["income", "expense"])
+export const finNature = pgEnum("fin_nature", ["fixed", "variable"])
+/** Só `normal` entra em ganhos e gastos (F06). */
+export const finTxClass = pgEnum("fin_tx_class", ["normal", "transfer", "adjustment"])
+/** F11 e F16: `planned` = prevista; `review` = espera você; `auto` = IA; `confirmed` = você ou regra. */
+export const finTxStatus = pgEnum("fin_tx_status", ["planned", "review", "auto", "confirmed"])
+export const finCategorySource = pgEnum("fin_category_source", ["user", "rule", "ai"])
+export const finRuleMatch = pgEnum("fin_rule_match", ["contains", "equals", "regex"])
+/** F12/F13: `ask` = sempre perguntar (a IA não chuta). */
+export const finRuleAction = pgEnum("fin_rule_action", ["categorize", "ask", "transfer"])
+export const finImportStatus = pgEnum("fin_import_status", ["done", "failed", "undone"])
+export const finDirection = pgEnum("fin_direction", ["in", "out"])
+export const finAssetType = pgEnum("fin_asset_type", [
+  "vehicle",
+  "real_estate",
+  "investment",
+  "other",
+])
+export const finSuggestionStatus = pgEnum("fin_suggestion_status", [
+  "pending",
+  "accepted",
+  "dismissed",
+])
+
+export const finAccounts = pgTable("fin_accounts", {
+  id: id(),
+  name: text().notNull(),
+  type: finAccountType().notNull(),
+  institution: finInstitution().notNull().default("other"),
+  /** Rótulo livre de titular (F02). */
+  holder: text(),
+  /** Só cartão: dias padrão para criar faturas (F05). */
+  closingDay: integer(),
+  dueDay: integer(),
+  /** Saldo no fim do dia `openingDate` (F18). Calculado sozinho pelo primeiro extrato com saldo. */
+  openingBalance: cents().notNull().default(0),
+  openingDate: day(),
+  /** Último saldo informado pelo banco, para conferir com o calculado. */
+  bankBalance: cents(),
+  bankBalanceDate: day(),
+  /**
+   * Conta sem extrato, só de passagem (ex.: o salário entra e vai para o cartão). Fica fora do
+   * patrimônio, das previsões e dos extratos; previstas nela se confirmam sozinhas na data.
+   */
+  trackBalance: boolean().notNull().default(true),
+  position: integer().notNull().default(0),
+  archivedAt: timestamp({ withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const finCategories = pgTable(
+  "fin_categories",
+  {
+    id: id(),
+    name: text().notNull(),
+    kind: finCategoryKind().notNull(),
+    /** Tipo padrão das transações desta categoria (F14). */
+    nature: finNature().notNull().default("variable"),
+    position: integer().notNull().default(0),
+    archivedAt: timestamp({ withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("fin_categories_name_unique")
+      .on(sql`lower(${t.name})`)
+      .where(sql`${t.archivedAt} is null`),
+  ],
+)
+
+export const finInvoices = pgTable(
+  "fin_invoices",
+  {
+    id: id(),
+    accountId: uuid()
+      .notNull()
+      .references(() => finAccounts.id, { onDelete: "cascade" }),
+    /** Dia 1 do mês de vencimento. */
+    referenceMonth: day().notNull(),
+    closingDate: day().notNull(),
+    bestPurchaseDate: day().notNull(),
+    dueDate: day().notNull(),
+    /** Total informado pelo banco (saldo do OFX da fatura). */
+    statementTotal: cents(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.accountId, t.referenceMonth)],
+)
+
+export const finImportBatches = pgTable(
+  "fin_import_batches",
+  {
+    id: id(),
+    accountId: uuid()
+      .notNull()
+      .references(() => finAccounts.id, { onDelete: "cascade" }),
+    fileName: text().notNull(),
+    format: text().notNull(),
+    invoiceId: uuid().references(() => finInvoices.id, { onDelete: "set null" }),
+    /** Dias que o arquivo cobre (F41/F61). */
+    periodStart: day(),
+    periodEnd: day(),
+    counts: jsonb().$type<Record<string, number>>().notNull().default({}),
+    /** Saldo do banco × calculado no último dia do arquivo, quando o arquivo traz saldo. */
+    balanceCheck: jsonb().$type<{ date: string; bank: number; computed: number }>(),
+    status: finImportStatus().notNull().default("done"),
+    createdAt: createdAt(),
+    undoneAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index().on(t.accountId, t.createdAt)],
+)
+
+export const finRecurring = pgTable("fin_recurring", {
+  id: id(),
+  name: text().notNull(),
+  direction: finDirection().notNull(),
+  categoryId: uuid().references(() => finCategories.id, { onDelete: "set null" }),
+  accountId: uuid()
+    .notNull()
+    .references(() => finAccounts.id, { onDelete: "cascade" }),
+  /** Valor esperado, sempre positivo. */
+  expectedAmount: cents().notNull().default(0),
+  tolerancePct: integer().notNull().default(15),
+  dayOfMonth: integer().notNull(),
+  /** Trecho do texto do banco que identifica o lançamento real (opcional). */
+  matchPattern: text(),
+  startsOn: day().notNull(),
+  endsOn: day(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+export const finRules = pgTable("fin_rules", {
+  id: id(),
+  matchType: finRuleMatch().notNull().default("contains"),
+  /** Comparado com a descrição original normalizada (sem acento, maiúsculas). */
+  pattern: text().notNull(),
+  accountId: uuid().references(() => finAccounts.id, { onDelete: "cascade" }),
+  minAmount: cents(),
+  maxAmount: cents(),
+  /** 1 = só entradas, -1 = só saídas. */
+  sign: integer(),
+  action: finRuleAction().notNull().default("categorize"),
+  categoryId: uuid().references(() => finCategories.id, { onDelete: "cascade" }),
+  renameTo: text(),
+  nature: finNature(),
+  priority: integer().notNull().default(0),
+  enabled: boolean().notNull().default(true),
+  hits: integer().notNull().default(0),
+  lastHitAt: timestamp({ withTimezone: true }),
+  createdBy: author().notNull().default("user"),
+  createdAt: createdAt(),
+})
+
+export const finTransactions = pgTable(
+  "fin_transactions",
+  {
+    id: id(),
+    accountId: uuid()
+      .notNull()
+      .references(() => finAccounts.id, { onDelete: "cascade" }),
+    invoiceId: uuid().references(() => finInvoices.id, { onDelete: "set null" }),
+    date: day().notNull(),
+    amount: cents().notNull(),
+    class: finTxClass().notNull().default("normal"),
+    /** Editável; a original do banco nunca muda (F15). */
+    description: text().notNull(),
+    originalDescription: text(),
+    /** Chave do estabelecimento (descrição original normalizada, sem números). */
+    merchant: text(),
+    categoryId: uuid().references(() => finCategories.id, { onDelete: "set null" }),
+    /** Sobrescreve o tipo da categoria só nesta transação. */
+    nature: finNature(),
+    status: finTxStatus().notNull().default("confirmed"),
+    categorySource: finCategorySource(),
+    ruleId: uuid().references(() => finRules.id, { onDelete: "set null" }),
+    aiConfidence: real(),
+    aiQuestion: text(),
+    /** Categorias sugeridas (ids), da IA ou do histórico. */
+    aiSuggestions: uuid().array(),
+    /** IA já olhou esta transação (não manda de novo). */
+    aiTriedAt: timestamp({ withTimezone: true }),
+    transferGroupId: uuid(),
+    installmentGroup: text(),
+    installmentNumber: integer(),
+    installmentTotal: integer(),
+    recurringId: uuid().references(() => finRecurring.id, { onDelete: "set null" }),
+    /** Dia 1 do mês da ocorrência do recorrente (F19). */
+    recurringPeriod: day(),
+    /** Data antes do primeiro adiamento (F29). */
+    deferredFrom: day(),
+    deferralReason: text(),
+    /** Lançada à mão e ainda não juntada com o extrato (F34). */
+    manual: boolean().notNull().default(false),
+    importBatchId: uuid().references(() => finImportBatches.id, { onDelete: "set null" }),
+    externalId: text(),
+    /** Identidade do lançamento no banco, única por conta (F08). */
+    fingerprint: text(),
+    notes: text(),
+    createdBy: author().notNull().default("user"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    index().on(t.date),
+    index().on(t.accountId, t.date),
+    index().on(t.categoryId, t.date),
+    index().on(t.merchant),
+    index()
+      .on(t.status)
+      .where(sql`${t.status} = 'review'`),
+    uniqueIndex()
+      .on(t.accountId, t.fingerprint)
+      .where(sql`${t.fingerprint} is not null and ${t.deletedAt} is null`),
+    uniqueIndex()
+      .on(t.recurringId, t.recurringPeriod)
+      .where(sql`${t.recurringId} is not null and ${t.deletedAt} is null`),
+  ],
+)
+
+/** Divisão de uma transação em várias categorias (F21/F36). A soma bate com o valor da transação. */
+export const finSplits = pgTable(
+  "fin_splits",
+  {
+    transactionId: uuid()
+      .notNull()
+      .references(() => finTransactions.id, { onDelete: "cascade" }),
+    idx: integer().notNull(),
+    categoryId: uuid().references(() => finCategories.id, { onDelete: "set null" }),
+    amount: cents().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.transactionId, t.idx] })],
+)
+
+export const finRuleSuggestions = pgTable(
+  "fin_rule_suggestions",
+  {
+    id: id(),
+    pattern: text().notNull(),
+    categoryId: uuid()
+      .notNull()
+      .references(() => finCategories.id, { onDelete: "cascade" }),
+    evidence: integer().notNull().default(0),
+    status: finSuggestionStatus().notNull().default("pending"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex().on(t.pattern)],
+)
+
+export const finAssets = pgTable("fin_assets", {
+  id: id(),
+  name: text().notNull(),
+  type: finAssetType().notNull().default("other"),
+  archivedAt: timestamp({ withTimezone: true }),
+  createdAt: createdAt(),
+})
+
+/** Valor de um bem numa data (F20). O valor atual é a avaliação mais recente. */
+export const finAssetValuations = pgTable(
+  "fin_asset_valuations",
+  {
+    id: id(),
+    assetId: uuid()
+      .notNull()
+      .references(() => finAssets.id, { onDelete: "cascade" }),
+    date: day().notNull(),
+    value: cents().notNull(),
+    source: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.assetId, t.date)],
+)
+
+/** Toda mudança em transação, para desfazer uma operação inteira (F22). */
+export const finChanges = pgTable(
+  "fin_changes",
+  {
+    id: id(),
+    operationId: uuid().notNull(),
+    transactionId: uuid().notNull(),
+    /** null = a transação não existia antes da operação. */
+    before: jsonb().$type<Record<string, unknown>>(),
+    author: author().notNull().default("user"),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.operationId)],
+)
+
+/**
+ * Contas sem data (F76): gastos que vão acontecer, mas sem quando (ex.: arrumar o para-choque).
+ * Não entram no mês até serem agendadas (viram uma transação prevista) ou pagas.
+ */
+export const finPending = pgTable(
+  "fin_pending",
+  {
+    id: id(),
+    name: text().notNull(),
+    /** Valor estimado, positivo; null = ainda não sei. */
+    estimate: cents(),
+    categoryId: uuid().references(() => finCategories.id, { onDelete: "set null" }),
+    notes: text(),
+    /** Transação criada ao agendar ou pagar; a conta sai da lista. */
+    transactionId: uuid().references(() => finTransactions.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    closedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index().on(t.closedAt)],
+)
+
+/** Dívidas (F84): o que alguém emprestou para vocês; pagamentos livres abatem o saldo. */
+export const finDebts = pgTable(
+  "fin_debts",
+  {
+    id: id(),
+    /** De quem ou do quê (ex.: "Empréstimo da mãe"). */
+    name: text().notNull(),
+    /** Quanto foi emprestado, positivo. */
+    amount: cents().notNull(),
+    startedOn: day().notNull(),
+    notes: text(),
+    createdAt: createdAt(),
+    /** Tirada da lista; quitada é quando os pagamentos cobrem o valor. */
+    archivedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [index().on(t.archivedAt)],
+)
+
+export const finDebtPayments = pgTable(
+  "fin_debt_payments",
+  {
+    id: id(),
+    debtId: uuid()
+      .notNull()
+      .references(() => finDebts.id, { onDelete: "cascade" }),
+    /** Saída criada ao pagar; se for apagada no fluxo, o pagamento deixa de contar. */
+    transactionId: uuid().references(() => finTransactions.id, { onDelete: "set null" }),
+    date: day().notNull(),
+    amount: cents().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.debtId)],
 )
