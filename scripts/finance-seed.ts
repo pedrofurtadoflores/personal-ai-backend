@@ -72,6 +72,8 @@ type Seed = {
     category?: string
     notes?: string
   }[]
+  /** Padrões de sugestões de regra da IA para recusar. */
+  dismissSuggestions?: string[]
   overrides?: {
     account: string
     date: string
@@ -345,5 +347,23 @@ console.log(
   `Ajustes aplicados: ${applied}${missing.length ? ` · não encontrados: ${missing.join("; ")}` : ""}`,
 )
 
-const review = await call<{ items: unknown[] }>("GET", "/finance/review")
-console.log(`Pronto. Para revisar no app: ${review.items.length} lançamentos.`)
+// Sugestões de regra recusadas (textos genéricos que categorizariam errado).
+const dismiss = new Set((seed.dismissSuggestions ?? []).map((p) => p.trim().toUpperCase()))
+let review = await call<{ items: unknown[]; ruleSuggestions: { id: string; pattern: string }[] }>(
+  "GET",
+  "/finance/review",
+)
+let dismissed = 0
+for (const s of review.ruleSuggestions) {
+  if (!dismiss.has(s.pattern.trim().toUpperCase())) continue
+  await call("POST", `/finance/rule-suggestions/${s.id}/dismiss`, {})
+  dismissed++
+}
+if (dismissed) {
+  console.log(`Sugestões recusadas: ${dismissed}`)
+  review = await call("GET", "/finance/review")
+}
+console.log(
+  `Pronto. Para revisar no app: ${review.items.length} lançamentos` +
+    (review.ruleSuggestions.length ? ` e ${review.ruleSuggestions.length} sugestões.` : "."),
+)
