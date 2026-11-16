@@ -7,6 +7,7 @@ import { enqueue } from "../../lib/jobs.js"
 import { HttpError, notFound, withErrors } from "../../lib/http.js"
 import { isoDate, jsonDates } from "../../lib/serialize.js"
 import { messagePart } from "../chat/parts.js"
+import { checkPersona, personaRefSchema, type PersonaRef } from "../personas/service.js"
 import { branchTo, getConversation, latestLeafBelow, listMessages } from "./service.js"
 
 const id = z.uuid()
@@ -15,6 +16,8 @@ export const conversationSchema = z.object({
   id: z.string(),
   title: z.string().nullable(),
   folderId: z.string().nullable(),
+  /** Persona atual (D80); `null` = padrão. */
+  personaId: z.string().nullable(),
   model: z.string().nullable(),
   systemPrompt: z.string().nullable(),
   settings: z.record(z.string(), z.unknown()),
@@ -35,6 +38,8 @@ export const messageSchema = z.object({
   content: z.array(messagePart),
   contentText: z.string().nullable(),
   model: z.string().nullable(),
+  /** Persona que gerou a resposta (D80); `null` = padrão. */
+  persona: personaRefSchema.nullable(),
   status: z.enum(["streaming", "completed", "stopped", "error", "incomplete"]),
   error: z.string().nullable(),
   tokensIn: z.number().nullable(),
@@ -93,6 +98,7 @@ const createBody = z.object({
   systemPrompt: z.string().max(8_000).optional(),
   anonymous: z.boolean().optional(),
   folderId: id.nullable().optional(),
+  personaId: id.nullable().optional(),
   settings: conversationSettings.optional(),
 })
 
@@ -105,6 +111,7 @@ const patchBody = z
     pinned: z.boolean(),
     archived: z.boolean(),
     folderId: id.nullable(),
+    personaId: id.nullable(),
     settings: conversationSettings,
   })
   .partial()
@@ -116,6 +123,7 @@ export const toMessage = (row: typeof messages.$inferSelect) =>
     jsonDates({
       ...row,
       contextTokens: (row.params as { contextTokens?: number } | null)?.contextTokens ?? null,
+      persona: (row.params as { persona?: PersonaRef } | null)?.persona ?? null,
     }),
   )
 
@@ -162,6 +170,7 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
+      await checkPersona(request.body.personaId)
       const [row] = await db
         .insert(conversations)
         .values({ ...request.body, settings: request.body.settings ?? {} })
@@ -202,6 +211,7 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const current = await getConversation(request.params.id)
+      await checkPersona(request.body.personaId)
       const { settings, ...rest } = request.body
       const [row] = await db
         .update(conversations)
@@ -263,6 +273,7 @@ export const conversationRoutes: FastifyPluginAsyncZod = async (app) => {
           .values({
             title: source.title ? `${source.title} (cópia)`.slice(0, 200) : null,
             folderId: source.folderId,
+            personaId: source.personaId,
             model: source.model,
             systemPrompt: source.systemPrompt,
             settings: source.settings,

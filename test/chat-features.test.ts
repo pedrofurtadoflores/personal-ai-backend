@@ -687,3 +687,124 @@ describe("projetos (D73)", () => {
     expect(listed.json().files).toHaveLength(1)
   })
 })
+
+describe("personas (D80)", () => {
+  type Persona = { id: string; name: string; emoji: string | null; position: number }
+
+  async function createPersona(payload: Record<string, unknown>) {
+    const response = await app.inject({ method: "POST", url: "/personas", headers: auth, payload })
+    expect(response.statusCode).toBe(201)
+    return response.json<Persona>()
+  }
+
+  it("CRUD: cria em ordem, edita, valida e apaga", async () => {
+    const first = await createPersona({ name: "Crítica", instructions: "Aponte falhas." })
+    const second = await createPersona({
+      name: "Coach",
+      emoji: "🏃",
+      description: "Motiva",
+      instructions: "Seja motivador.",
+    })
+    expect(second.position).toBe(first.position + 1)
+    expect(first.emoji).toBeNull()
+
+    const invalid = await app.inject({
+      method: "POST",
+      url: "/personas",
+      headers: auth,
+      payload: { name: "", instructions: "x" },
+    })
+    expect(invalid.statusCode).toBe(400)
+
+    const edited = await app.inject({
+      method: "PATCH",
+      url: `/personas/${first.id}`,
+      headers: auth,
+      payload: { name: "Crítica dura", emoji: "🔪" },
+    })
+    expect(edited.json()).toMatchObject({ name: "Crítica dura", emoji: "🔪" })
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/personas/${second.id}`,
+      headers: auth,
+    })
+    expect(removed.statusCode).toBe(204)
+    const again = await app.inject({
+      method: "DELETE",
+      url: `/personas/${second.id}`,
+      headers: auth,
+    })
+    expect(again.statusCode).toBe(404)
+
+    const list = (await app.inject({ method: "GET", url: "/personas", headers: auth })).json()
+    expect(list.personas.map((persona: Persona) => persona.name)).toContain("Crítica dura")
+    expect(list.personas.map((persona: Persona) => persona.name)).not.toContain("Coach")
+  })
+
+  it("troca de persona no meio da conversa e cada resposta guarda quem respondeu", async () => {
+    const socratic = await createPersona({
+      name: "Filosófica",
+      emoji: "🦉",
+      instructions: "Responda só com perguntas.",
+    })
+    const id = await newConversation({ personaId: socratic.id })
+
+    fake.rounds = [textRound("O que você entende por felicidade?")]
+    const first = doneMessage(await send(id, { text: "Como ser feliz?" }))
+    expect(streamRequests()[0]!.instructions).toContain("## Persona: Filosófica")
+    expect(streamRequests()[0]!.instructions).toContain("Responda só com perguntas.")
+    expect(first).toMatchObject({
+      persona: { id: socratic.id, name: "Filosófica", emoji: "🦉" },
+    })
+
+    // Volta ao padrão só nesta resposta (`null`), sem mexer na conversa.
+    fake.rounds = [textRound("Dormir bem ajuda.")]
+    const second = doneMessage(
+      await send(id, { text: "Me dê uma dica direta", parentId: first.id, personaId: null }),
+    )
+    expect(streamRequests()[1]!.instructions).not.toContain("## Persona:")
+    expect(second).toMatchObject({ persona: null })
+
+    // Persona inexistente é recusada.
+    const missing = await post(id, {
+      text: "oi",
+      parentId: second.id,
+      personaId: "00000000-0000-4000-8000-000000000000",
+    })
+    expect(missing.statusCode).toBe(404)
+
+    // Apagar a persona: a conversa volta ao padrão e a resposta antiga mantém o nome.
+    await app.inject({ method: "DELETE", url: `/personas/${socratic.id}`, headers: auth })
+    const conversation = (
+      await app.inject({ method: "GET", url: `/conversations/${id}`, headers: auth })
+    ).json()
+    expect(conversation.conversation.personaId).toBeNull()
+    const old = conversation.messages.find((message: { id: string }) => message.id === first.id)
+    expect(old.persona).toMatchObject({ name: "Filosófica" })
+  })
+
+  it("a persona da conversa pode ser trocada pelo PATCH e vale para as próximas respostas", async () => {
+    const coach = await createPersona({ name: "Coach", instructions: "Seja motivador." })
+    const id = await newConversation()
+    const patched = await app.inject({
+      method: "PATCH",
+      url: `/conversations/${id}`,
+      headers: auth,
+      payload: { personaId: coach.id },
+    })
+    expect(patched.json().personaId).toBe(coach.id)
+
+    fake.rounds = [textRound("Vamos lá!")]
+    await send(id, { text: "Preciso treinar" })
+    expect(streamRequests()[0]!.instructions).toContain("## Persona: Coach")
+
+    const bad = await app.inject({
+      method: "PATCH",
+      url: `/conversations/${id}`,
+      headers: auth,
+      payload: { personaId: "00000000-0000-4000-8000-000000000000" },
+    })
+    expect(bad.statusCode).toBe(404)
+  })
+})

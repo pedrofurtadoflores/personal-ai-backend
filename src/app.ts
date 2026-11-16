@@ -27,6 +27,7 @@ import { fileRoutes } from "./modules/files/routes.js"
 import { financeRoutes } from "./modules/finance/routes.js"
 import { healthRoutes } from "./modules/health/routes.js"
 import { modelRoutes } from "./modules/models/routes.js"
+import { personaRoutes } from "./modules/personas/routes.js"
 import "./modules/models/service.js"
 import { searchRoutes } from "./modules/search/routes.js"
 import { settingsRoutes } from "./modules/settings/routes.js"
@@ -171,6 +172,7 @@ export async function buildApp() {
   await app.register(usageRoutes)
   await app.register(conversationRoutes)
   await app.register(chatRoutes)
+  await app.register(personaRoutes)
   await app.register(fileRoutes)
   await app.register(sinapseRoutes)
   await app.register(searchRoutes)

@@ -43,6 +43,7 @@ import {
   folderOf,
   retrieveContext,
 } from "./context.js"
+import { findPersona, toPersonaRef } from "../personas/service.js"
 import { partsToText, type MessagePart } from "./parts.js"
 import type { Emit } from "./runs.js"
 import { fetchUrlTool, runTool, sinapseTools } from "./tools.js"
@@ -73,6 +74,8 @@ export type ReplyOptions = {
   codeInterpreter?: boolean
   /** D71: só vai para a OpenAI se o modelo aceitar (senão é ignorada e lembrada). */
   temperature?: number | null
+  /** D80: `null` = padrão; sem o campo, vale a persona da conversa. */
+  personaId?: string | null
 }
 
 /** Modelos que recusaram `temperature` (os de raciocínio): não manda mais para eles. */
@@ -129,6 +132,10 @@ export async function generateReply(params: {
   const imageGeneration = params.options.imageGeneration ?? convSettings.imageGeneration ?? false
   const codeInterpreter = params.options.codeInterpreter ?? convSettings.codeInterpreter ?? false
   const temperature = params.options.temperature ?? convSettings.temperature ?? null
+  // Persona apagada no meio do caminho cai no padrão (D80).
+  const persona = await findPersona(
+    params.options.personaId !== undefined ? params.options.personaId : conversation.personaId,
+  )
 
   const parts: MessagePart[] = []
   const sources = new Map<string, string>()
@@ -152,7 +159,7 @@ export async function generateReply(params: {
     const all = await listMessages(conversation.id)
     const branch = branchTo(all, userMessage.id)
     const folder = await folderOf(conversation)
-    const instructions = await buildInstructions(conversation, settings, folder)
+    const instructions = await buildInstructions(conversation, settings, folder, persona)
 
     // D67: histórico dentro do orçamento; o começo vira resumo quando passa do teto.
     const compaction = await compactBranch({
@@ -459,6 +466,7 @@ export async function generateReply(params: {
           codeInterpreter,
           ...(temperature !== null ? { temperature } : {}),
           ...(continueFrom ? { continuedFrom: continueFrom.id } : {}),
+          ...(persona ? { persona: toPersonaRef(persona) } : {}),
           ...contextParams,
         },
         status,

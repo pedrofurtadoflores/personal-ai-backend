@@ -57,6 +57,13 @@
       "when": 1793219040038,
       "tag": "0007_dividas",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794838366952,
+      "tag": "0008_personas",
+      "breakpoints": true
     }
   ]
 }

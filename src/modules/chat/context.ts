@@ -7,6 +7,7 @@ import { embedOne } from "../../lib/embeddings.js"
 import { r2 } from "../../lib/r2.js"
 import type { Conversation, Message } from "../conversations/service.js"
 import { isSpreadsheet } from "../files/extract.js"
+import { findPersona, type Persona } from "../personas/service.js"
 import type { AppSettings } from "../settings/service.js"
 import {
   ensureAboutMe,
@@ -47,7 +48,10 @@ export async function buildInstructions(
   conversation: Conversation,
   settings: AppSettings,
   folder: Folder | null = null,
+  /** D80: sem o argumento, usa a persona da conversa; `null` = padrão. */
+  persona?: Persona | null,
 ) {
+  if (persona === undefined) persona = await findPersona(conversation.personaId)
   const today = new Date().toLocaleDateString("pt-BR", {
     timeZone: "America/Sao_Paulo",
     weekday: "long",
@@ -72,6 +76,16 @@ export async function buildInstructions(
   }
   if (conversation.systemPrompt?.trim()) {
     parts.push(`## Instruções desta conversa\n\n${conversation.systemPrompt.trim()}`)
+  }
+  if (persona) {
+    parts.push(
+      `## Persona: ${persona.name}\n\n` +
+        "Responda como a persona descrita abaixo. Ela define seu tom, sua postura e o formato das respostas, " +
+        "e prevalece sobre as orientações de estilo acima quando houver conflito. " +
+        "Respostas anteriores da conversa podem ter vindo de outra persona: siga só esta daqui em diante. " +
+        "A memória e as ferramentas continuam valendo normalmente.\n\n" +
+        persona.instructions.trim(),
+    )
   }
 
   if (conversation.anonymous) {

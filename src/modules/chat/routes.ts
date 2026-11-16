@@ -11,6 +11,7 @@ import "./feedback.js"
 import { generateReply, type ReplyOptions } from "./orchestrator.js"
 import type { MessagePart } from "./parts.js"
 import { activeRun, createRun, pipeRun, stopRun, type Run } from "./runs.js"
+import { checkPersona } from "../personas/service.js"
 import { homeSuggestions } from "./suggestions.js"
 
 const replyOptions = z.object({
@@ -20,6 +21,8 @@ const replyOptions = z.object({
   imageGeneration: z.boolean().optional(),
   codeInterpreter: z.boolean().optional(),
   temperature: z.number().min(0).max(2).nullable().optional(),
+  /** Persona desta resposta (D80); `null` = padrão. Sem o campo, vale a da conversa. */
+  personaId: z.uuid().nullable().optional(),
 })
 
 const sendBody = replyOptions.extend({
@@ -126,6 +129,7 @@ export const chatRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const conversation = await getConversation(request.params.id)
       const { parentId, text, fileIds, sinapseIds, ...options } = request.body
+      await checkPersona(options.personaId)
       if (!text.trim() && !fileIds.length) {
         throw new HttpError(400, "empty_message", "Escreva uma mensagem ou anexe um arquivo.")
       }
@@ -207,6 +211,7 @@ export const chatRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const conversation = await getConversation(request.params.id)
+      await checkPersona(request.body.personaId)
       const target = await messageIn(conversation.id, request.params.messageId)
 
       // Regenerar uma resposta = nova resposta para a mesma pergunta.
@@ -242,6 +247,7 @@ export const chatRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const conversation = await getConversation(request.params.id)
+      await checkPersona(request.body.personaId)
       const target = await messageIn(conversation.id, request.params.messageId)
       if (target.role !== "assistant" || !["incomplete", "stopped"].includes(target.status)) {
         throw new HttpError(
@@ -262,8 +268,12 @@ export const chatRoutes: FastifyPluginAsyncZod = async (app) => {
           run,
           conversation,
           userMessage,
-          // Mesmo modelo da resposta cortada, a menos que o pedido diga outro.
-          options: { model: target.model, ...request.body },
+          // Mesmo modelo e persona da resposta cortada, a menos que o pedido diga outro.
+          options: {
+            model: target.model,
+            personaId: (target.params as { persona?: { id: string } } | null)?.persona?.id ?? null,
+            ...request.body,
+          },
           sendUser: false,
           continueFrom: target,
         }),

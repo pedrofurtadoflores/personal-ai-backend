@@ -91,12 +91,30 @@ export const folders = pgTable("folders", {
   updatedAt: updatedAt(),
 })
 
+/**
+ * Personas (D80): um prompt que define quem responde (tom, postura, formato).
+ * Sem persona = "Padrão". Apagar uma persona devolve as conversas dela ao padrão.
+ */
+export const personas = pgTable("personas", {
+  id: id(),
+  name: text().notNull(),
+  emoji: text(),
+  /** Frase curta mostrada no seletor. */
+  description: text().notNull().default(""),
+  instructions: text().notNull(),
+  position: integer().notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
 export const conversations = pgTable(
   "conversations",
   {
     id: id(),
     title: text(),
     folderId: uuid().references(() => folders.id, { onDelete: "set null" }),
+    /** Persona atual da conversa (D80); cada resposta guarda a que a gerou em `params.persona`. */
+    personaId: uuid().references(() => personas.id, { onDelete: "set null" }),
     model: text(),
     systemPrompt: text(),
     /** temperatura, reasoning effort, tools ligadas etc. */
