@@ -868,3 +868,58 @@ export const finDebtPayments = pgTable(
   },
   (t) => [index().on(t.debtId)],
 )
+
+// ─── Diário (D81) ───────────────────────────────────────────────────────────
+
+/** Um dia do diário (virada às 4h). O condensado é refeito quando uma entrada é concluída. */
+export const diaryDays = pgTable("diary_days", {
+  id: id(),
+  date: day().notNull().unique(),
+  /** Texto condensado do dia, em primeira pessoa (markdown). Vazio até a primeira entrada concluída. */
+  summary: text().notNull().default(""),
+  learnings: text()
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+  /** 1 a 5, marcado só pelo usuário (a IA nunca infere o humor). */
+  mood: integer(),
+  /** O usuário mexeu no texto: o próximo condensado parte dele em vez de recomeçar do zero. */
+  summaryEdited: boolean().notNull().default(false),
+  condensedAt: timestamp({ withTimezone: true }),
+  embedding: embedding(),
+  embeddingModel: text(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+})
+
+/** Uma sessão de escrita: o relato inicial e as perguntas e respostas que vêm depois. */
+export const diaryEntries = pgTable(
+  "diary_entries",
+  {
+    id: id(),
+    date: day().notNull(),
+    /** "live" = escrito no próprio dia; "retro" = sobre um dia que já passou. */
+    kind: text().$type<"live" | "retro">().notNull(),
+    status: text().$type<"open" | "concluded">().notNull().default("open"),
+    createdAt: createdAt(),
+    concludedAt: timestamp({ withTimezone: true }),
+    /** Já virou memória (sinapses): evita guardar a mesma entrada duas vezes. */
+    memorizedAt: timestamp({ withTimezone: true }),
+    deletedAt: deletedAt(),
+  },
+  (t) => [index().on(t.date)],
+)
+
+export const diaryTurns = pgTable(
+  "diary_turns",
+  {
+    id: id(),
+    entryId: uuid()
+      .notNull()
+      .references(() => diaryEntries.id, { onDelete: "cascade" }),
+    role: text().$type<"user" | "assistant">().notNull(),
+    text: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.entryId, t.createdAt)],
+)

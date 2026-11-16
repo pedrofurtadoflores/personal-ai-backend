@@ -64,6 +64,13 @@
       "when": 1794838366952,
       "tag": "0008_personas",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794840521779,
+      "tag": "0009_diario",
+      "breakpoints": true
     }
   ]
 }

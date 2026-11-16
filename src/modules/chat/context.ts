@@ -116,7 +116,8 @@ export async function buildInstructions(
       "Use as ferramentas `search_sinapses` e `read_sinapse` quando o assunto puder ter algo guardado. " +
       `${aggressivenessGuide[settings.sinapsesAggressiveness]} ` +
       "Para guardar, prefira atualizar uma sinapse existente do mesmo tema (`update_sinapse`) a criar outra; crie (`create_sinapse`) só para temas novos. " +
-      "Escreva sempre em pt-BR, em terceira pessoa sobre o usuário, de forma objetiva. Não avise que vai guardar; apenas guarde.",
+      "Escreva sempre em pt-BR, em terceira pessoa sobre o usuário, de forma objetiva. Não avise que vai guardar; apenas guarde. " +
+      "O usuário também mantém um diário pessoal (somente leitura para você): use `search_diary` e `read_diary_day` quando ele perguntar sobre o que viveu, sentiu ou aprendeu em certos dias, e trate esse conteúdo com cuidado e discrição.",
   )
   const pinnedIds = new Set(pinned.map((sinapse) => sinapse.id))
   for (const sinapse of pinned) {

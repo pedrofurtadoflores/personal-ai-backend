@@ -230,7 +230,7 @@ export async function resetData() {
   await db.execute(sql`
     truncate table conversation_summaries, usage_events, generated_images, message_files, file_chunks, sinapse_suggestions,
       sinapse_sources, sinapse_links, sinapse_versions, sinapse_chunks, sinapses, tool_calls,
-      message_embeddings, messages, conversations, folders, personas, files, model_catalog, backups, login_throttle,
+      message_embeddings, messages, conversations, folders, personas, diary_turns, diary_entries, diary_days, files, model_catalog, backups, login_throttle,
       fin_changes, fin_splits, fin_transactions, fin_rule_suggestions, fin_rules, fin_recurring, fin_import_batches,
       fin_debt_payments, fin_debts, fin_pending, fin_invoices, fin_asset_valuations, fin_assets, fin_categories, fin_accounts
     restart identity cascade

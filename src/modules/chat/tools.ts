@@ -12,6 +12,7 @@ import {
   updateSinapse,
 } from "../sinapses/service.js"
 import { embedOne } from "../../lib/embeddings.js"
+import { readDiaryDay, searchDiary } from "../diary/service.js"
 import { fetchUrl, FetchUrlError } from "./fetch-url.js"
 import type { MessagePart } from "./parts.js"
 
@@ -70,6 +71,18 @@ export const sinapseTools: FunctionTool[] = [
     a: str("Id de uma sinapse"),
     b: str("Id da outra sinapse"),
     reason: str("Por que estão relacionadas"),
+  }),
+]
+
+/** Consulta ao diário (D81): só leitura; escrever é com o usuário, na página do Diário. */
+export const diaryTools: FunctionTool[] = [
+  fn(
+    "search_diary",
+    "Busca no diário pessoal do usuário (dias já condensados) por tema, pessoa, sentimento ou acontecimento.",
+    { query: str("O que procurar") },
+  ),
+  fn("read_diary_day", "Lê o registro de um dia do diário.", {
+    date: str("Data no formato AAAA-MM-DD"),
   }),
 ]
 
@@ -135,6 +148,14 @@ export async function runTool(
       case "search_sinapses": {
         const results = await searchSinapses(String(args.query ?? ""))
         return { output: JSON.stringify(results.length ? results : "Nada encontrado.") }
+      }
+      case "search_diary": {
+        const results = await searchDiary(String(args.query ?? ""))
+        return { output: JSON.stringify(results.length ? results : "Nada encontrado no diário.") }
+      }
+      case "read_diary_day": {
+        const day = await readDiaryDay(String(args.date ?? ""))
+        return { output: JSON.stringify(day ?? "Não há registro neste dia.") }
       }
       case "read_sinapse": {
         const sinapse = await getSinapse(String(args.id))

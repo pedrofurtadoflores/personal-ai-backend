@@ -46,7 +46,7 @@ import {
 import { findPersona, toPersonaRef } from "../personas/service.js"
 import { partsToText, type MessagePart } from "./parts.js"
 import type { Emit } from "./runs.js"
-import { fetchUrlTool, runTool, sinapseTools } from "./tools.js"
+import { diaryTools, fetchUrlTool, runTool, sinapseTools } from "./tools.js"
 
 export type { Emit }
 
@@ -219,7 +219,7 @@ export async function generateReply(params: {
     }
 
     const tools: Tool[] = [fetchUrlTool]
-    if (!conversation.anonymous) tools.push(...sinapseTools)
+    if (!conversation.anonymous) tools.push(...sinapseTools, ...diaryTools)
     if (webSearch) tools.push({ type: "web_search" })
     if (imageGeneration) {
       // WebP: bem mais leve que PNG para a galeria e o chat (2,4 MB → ~200 KB).

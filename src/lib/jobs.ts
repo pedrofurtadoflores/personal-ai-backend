@@ -17,6 +17,7 @@ export type JobName =
   | "conversation.compact"
   | "feedback.learn"
   | "finance.categorize"
+  | "diary.memorize"
 
 type Handler = (data: Record<string, unknown>) => Promise<void>
 

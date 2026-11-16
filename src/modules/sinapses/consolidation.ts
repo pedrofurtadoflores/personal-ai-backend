@@ -9,6 +9,7 @@ import { z } from "zod"
 import { db } from "../../db/client.js"
 import {
   conversations,
+  diaryDays,
   fileChunks,
   files,
   messageEmbeddings,
@@ -22,6 +23,7 @@ import { enqueue, registerJob } from "../../lib/jobs.js"
 import { openai } from "../../lib/openai.js"
 import { fromResponsesUsage, recordUsage } from "../../lib/pricing.js"
 import type { MessagePart } from "../chat/parts.js"
+import { embedDay } from "../diary/service.js"
 import { branchTo, listMessages } from "../conversations/service.js"
 import { getSettings } from "../settings/service.js"
 import {
@@ -116,12 +118,6 @@ export async function consolidateConversation(conversationId: string, { force = 
       .join("\n\n"),
     MAX_TRANSCRIPT_CHARS,
   )
-  const { vector } = await embedOne(transcript.slice(0, 8_000))
-  const [candidates, index] = await Promise.all([
-    similarSinapses(vector, { limit: 8 }),
-    sinapseIndex(80),
-  ])
-
   // O que a IA já salvou durante a conversa (tools) e o conteúdo atual das sinapses mais
   // próximas: sem isso, a consolidação repetiria fatos que já estão guardados.
   const alreadySaved = fresh.flatMap((message) =>
@@ -129,6 +125,45 @@ export async function consolidateConversation(conversationId: string, { force = 
       .filter((part) => part.type === "sinapse")
       .map((part) => `- ${part.action}: ${part.title}`),
   )
+  const lastMessage = fresh[fresh.length - 1]!
+  const { applied } = await memorizeText({
+    transcript,
+    external,
+    alreadySaved,
+    sourceMessageId: lastMessage.id,
+    conversationId,
+    kind: "conversa",
+  })
+  await db
+    .update(conversations)
+    // Preserva updated_at: consolidar não é atividade (não reordena a sidebar nem reinicia a espera).
+    .set({ lastConsolidatedAt: lastMessage.createdAt, updatedAt: conversation.updatedAt })
+    .where(eq(conversations.id, conversationId))
+  return { applied }
+}
+
+/**
+ * Lê um texto novo (trecho de conversa ou entrada de diário), decide o que vale guardar e
+ * cria/atualiza sinapses, evitando duplicatas por similaridade.
+ */
+export async function memorizeText(params: {
+  transcript: string
+  /** D37: conteúdo externo → tudo vira sugestão para o usuário aprovar. */
+  external: boolean
+  alreadySaved?: string[]
+  sourceMessageId: string | null
+  conversationId: string | null
+  kind: "conversa" | "diário"
+}) {
+  const { transcript, external, sourceMessageId, conversationId, kind } = params
+  const alreadySaved = params.alreadySaved ?? []
+  const settings = await getSettings()
+  const { vector } = await embedOne(transcript.slice(0, 8_000))
+  const [candidates, index] = await Promise.all([
+    similarSinapses(vector, { limit: 8 }),
+    sinapseIndex(80),
+  ])
+
   const closest = await Promise.all(
     candidates.slice(0, 3).map(async (candidate) => {
       const sinapse = await getSinapse(candidate.id).catch(() => null)
@@ -143,7 +178,9 @@ export async function consolidateConversation(conversationId: string, { force = 
     store: false,
     instructions: [
       "Você mantém a memória de longo prazo (sinapses) de um assistente pessoal.",
-      "Leia o trecho novo da conversa e decida o que vale guardar. Cada sinapse é um tema (ex.: Carreira, Ideias de projeto, Saúde, Filosofia).",
+      kind === "diário"
+        ? "Leia a entrada nova do diário pessoal do usuário e decida o que vale guardar. Cada sinapse é um tema (ex.: Carreira, Ideias de projeto, Saúde, Filosofia). É um diário: guarde só o que for durável (fatos, aprendizados, padrões, decisões, pessoas e projetos importantes); não guarde detalhes passageiros nem o humor do momento, a menos que revele um padrão."
+        : "Leia o trecho novo da conversa e decida o que vale guardar. Cada sinapse é um tema (ex.: Carreira, Ideias de projeto, Saúde, Filosofia).",
       guide[settings.sinapsesAggressiveness],
       "Regras: escreva em pt-BR (D25), em terceira pessoa sobre o usuário, objetivo. Prefira `update` numa sinapse existente do mesmo tema a criar outra.",
       "Em `update`, `content` é só a seção nova/atualizada e `sectionTitle` o título dela. Em `create`, `content` é o documento inicial em markdown.",
@@ -163,7 +200,7 @@ export async function consolidateConversation(conversationId: string, { force = 
       closest.filter(Boolean).join("\n\n") || "(nenhuma)",
       "## Já salvo durante esta conversa",
       alreadySaved.join("\n") || "(nada)",
-      "## Trecho novo da conversa",
+      kind === "diário" ? "## Entrada nova do diário" : "## Trecho novo da conversa",
       transcript,
     ].join("\n\n"),
     text: { format: zodTextFormat(planSchema, "memory_plan") },
@@ -175,8 +212,7 @@ export async function consolidateConversation(conversationId: string, { force = 
   })
 
   const plan = response.output_parsed ?? { items: [], links: [] }
-  const lastMessage = fresh[fresh.length - 1]!
-  const context = { author: "ai" as const, sourceMessageId: lastMessage.id, conversationId }
+  const context = { author: "ai" as const, sourceMessageId, conversationId }
   const touched = new Set<string>()
   let applied = 0
 
@@ -197,7 +233,7 @@ export async function consolidateConversation(conversationId: string, { force = 
         content: item.content,
         tags: item.tags,
       }
-      if (external) await suggest(null, { kind: "create", input }, item.reason, lastMessage.id)
+      if (external) await suggest(null, { kind: "create", input }, item.reason, sourceMessageId)
       else touched.add((await createSinapse(input, { ...context, reason: item.reason })).sinapse.id)
       applied += 1
       continue
@@ -216,7 +252,7 @@ export async function consolidateConversation(conversationId: string, { force = 
       tags: [...target.tags, ...item.tags],
     }
     if (external || target.locked) {
-      await suggest(target.id, { kind: "update", patch }, item.reason, lastMessage.id)
+      await suggest(target.id, { kind: "update", patch }, item.reason, sourceMessageId)
     } else {
       await updateSinapse(target.id, patch, { ...context, reason: item.reason })
       touched.add(target.id)
@@ -233,11 +269,6 @@ export async function consolidateConversation(conversationId: string, { force = 
   }
 
   await suggestMerges([...touched])
-  await db
-    .update(conversations)
-    // Preserva updated_at: consolidar não é atividade (não reordena a sidebar nem reinicia a espera).
-    .set({ lastConsolidatedAt: lastMessage.createdAt, updatedAt: conversation.updatedAt })
-    .where(eq(conversations.id, conversationId))
   return { applied }
 }
 
@@ -271,6 +302,11 @@ async function suggestMerges(ids: string[]) {
 export async function reindexAll() {
   const rows = await db.select().from(sinapses).where(isNull(sinapses.deletedAt))
   for (const row of rows) await reindexSinapse(row)
+
+  // Dias do diário (D81): o condensado também tem embedding.
+  for (const day of await db.select({ date: diaryDays.date }).from(diaryDays)) {
+    await embedDay(day.date)
+  }
 
   const fileRows = await db
     .select()
